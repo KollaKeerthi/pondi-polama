@@ -136,6 +136,36 @@ function ratingFor(ratings: Rating[], travelerId: string, optionId: string) {
   return ratings.find((rating) => rating.travelerId === travelerId && rating.optionId === optionId)?.stars ?? 0;
 }
 
+function makeMapsUrl(query: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function mapUrlFor(option: TripOption) {
+  return option.link || makeMapsUrl(`${option.name} ${option.location || "Pondicherry"}`);
+}
+
+function priorityFor(option: TripOption) {
+  const text = `${option.name} ${option.notes} ${option.description}`.toLowerCase();
+  if (text.includes("must") || text.includes("best for") || text.includes("strong")) return "Must Visit";
+  if (text.includes("optional") || text.includes("mid food")) return "Optional";
+  if (text.includes("verify") || text.includes("bad service")) return "Good Option";
+  return "Good Option";
+}
+
+function constraintsFor(option: TripOption) {
+  const text = `${option.famousFor} ${option.notes}`.toLowerCase();
+  const constraints = [];
+  if (text.includes("sunday")) constraints.push("Only Sunday");
+  if (text.includes("pre-book") || text.includes("reserve") || text.includes("reservation")) constraints.push("Pre-book recommended");
+  if (text.includes("no-photo") || text.includes("silence")) constraints.push("Quiet rules");
+  if (text.includes("avoid harsh") || text.includes("heat")) constraints.push("Avoid afternoon heat");
+  if (text.includes("verify")) constraints.push("Verify hours");
+  if (text.includes("weather")) constraints.push("Weather dependent");
+  if (text.includes("crowded") || text.includes("popular")) constraints.push("Can get crowded");
+  if (text.includes("bad service")) constraints.push("Service warning");
+  return constraints;
+}
+
 function daysUntilTrip() {
   const today = new Date();
   const tripStart = new Date("2026-08-01T00:00:00");
@@ -432,6 +462,7 @@ export default function PlannerApp() {
   const [activeCategory, setActiveCategory] = useState<Category>("stay");
   const [activePage, setActivePage] = useState<PageId>("dashboard");
   const [editingOption, setEditingOption] = useState<RankedOption | null>(null);
+  const [optionModalOpen, setOptionModalOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [checkedPacking, setCheckedPacking] = useState<Record<string, boolean>>({});
@@ -512,6 +543,7 @@ export default function PlannerApp() {
 
     event.currentTarget.reset();
     setEditingOption(null);
+    setOptionModalOpen(false);
     setMessage(editingOption ? "Option updated for the group." : "Option added for the group.");
     await loadState();
   }
@@ -520,6 +552,12 @@ export default function PlannerApp() {
     setActiveCategory(option.category);
     setActivePage("plan");
     setEditingOption(option);
+    setOptionModalOpen(true);
+  }
+
+  function openAddOption() {
+    setEditingOption(null);
+    setOptionModalOpen(true);
   }
 
   async function deleteTripOption(optionId: string) {
@@ -653,7 +691,13 @@ export default function PlannerApp() {
           <section id="plan" className={cn("grid gap-5", activePage !== "plan" && "hidden")}>
             <Card>
               <CardHeader>
-                <PageHeader eyebrow="Coastal map" title="Options and group ratings" description="Add places by category, rate them with stars, and keep the full voting pool visible to everyone." />
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <PageHeader eyebrow="Coastal map" title="Places and group ratings" description="Saved travel cards with recommendations, best times, map links, constraints, photos, and group stars." />
+                  <Button type="button" onClick={openAddOption} className="w-full sm:w-fit">
+                    <Plus size={17} />
+                    Add Place
+                  </Button>
+                </div>
                 <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-6">
                   {categories.map((category) => {
                     const Icon = categoryIcons[category];
@@ -676,43 +720,6 @@ export default function PlannerApp() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
-                <Card className="border-dashed bg-background/45 shadow-none">
-                  <CardHeader>
-                    <CardTitle>Add {categoryLabels[activeCategory]} Option</CardTitle>
-                    <CardDescription>{categoryHints[activeCategory]}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form key={editingOption?.id ?? activeCategory} className="grid gap-4" onSubmit={submitOption}>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <FieldLabel>Name<Input name="name" required placeholder="e.g. Villa Shanti" defaultValue={editingOption?.name ?? ""} /></FieldLabel>
-                        <FieldLabel>Area / location<Input name="location" required placeholder="e.g. White Town" defaultValue={editingOption?.location ?? ""} /></FieldLabel>
-                        <FieldLabel>Link<Input name="link" type="url" placeholder="https://..." defaultValue={editingOption?.link ?? ""} /></FieldLabel>
-                        <FieldLabel>What it serves / offers<Input name="description" placeholder="Cuisine, rooms, activities..." defaultValue={editingOption?.description ?? ""} /></FieldLabel>
-                        <FieldLabel>Famous for<Input name="famousFor" placeholder="Why people go here" defaultValue={editingOption?.famousFor ?? ""} /></FieldLabel>
-                        <FieldLabel>Notes<Input name="notes" placeholder="Timing, dress code, booking notes..." defaultValue={editingOption?.notes ?? ""} /></FieldLabel>
-                        {activeCategory === "stay" ? (
-                          <>
-                            <FieldLabel>Total cost<Input name="totalCost" type="number" min="0" placeholder="INR" defaultValue={editingOption?.totalCost ?? ""} /></FieldLabel>
-                            <FieldLabel>Per-person cost<Input name="perPersonCost" type="number" min="0" placeholder="INR" defaultValue={editingOption?.perPersonCost ?? ""} /></FieldLabel>
-                            <FieldLabel>Capacity notes<Input name="capacityNotes" placeholder="Beds, rooms, rules" defaultValue={editingOption?.capacityNotes ?? ""} /></FieldLabel>
-                          </>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button type="submit" disabled={busy} className="w-full sm:w-fit">
-                          {editingOption ? <Save size={17} /> : <Plus size={17} />}
-                          {editingOption ? "Update option" : "Add option"}
-                        </Button>
-                        {editingOption ? (
-                          <Button type="button" variant="outline" onClick={() => setEditingOption(null)}>
-                            Cancel edit
-                          </Button>
-                        ) : null}
-                      </div>
-                    </form>
-                  </CardContent>
-                </Card>
-
                 <div className="grid gap-3">
                   {visibleOptions.length === 0 ? (
                     <EmptyState icon={MapPin} title="No plans added yet" description="Start building your Pondicherry itinerary by adding the first option in this category." />
@@ -848,6 +855,55 @@ export default function PlannerApp() {
           </section>
         </div>
       </div>
+      {optionModalOpen ? (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-primary/35 p-4 backdrop-blur-sm">
+          <Card className="max-h-[92vh] w-full max-w-3xl overflow-auto">
+            <CardHeader className="border-b border-border">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <Badge variant="highlight">{editingOption ? "Edit travel card" : "New travel card"}</Badge>
+                  <CardTitle className="mt-3">{editingOption ? `Edit ${editingOption.name}` : `Add ${categoryLabels[activeCategory]} Place`}</CardTitle>
+                  <CardDescription>{categoryHints[activeCategory]} - timings can change, so keep notes editable.</CardDescription>
+                </div>
+                <Button type="button" variant="outline" onClick={() => { setOptionModalOpen(false); setEditingOption(null); }}>
+                  Close
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5">
+              <form key={editingOption?.id ?? `new-${activeCategory}`} className="grid gap-4" onSubmit={submitOption}>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <FieldLabel>Name<Input name="name" required placeholder="e.g. Villa Shanti" defaultValue={editingOption?.name ?? ""} /></FieldLabel>
+                  <FieldLabel>Area / location<Input name="location" required placeholder="e.g. White Town" defaultValue={editingOption?.location ?? ""} /></FieldLabel>
+                  <FieldLabel>Map or source link<Input name="link" type="url" placeholder="https://..." defaultValue={editingOption?.link ?? ""} /></FieldLabel>
+                  <FieldLabel>Cuisine / type<Input name="description" placeholder="Cafe, boutique, temple, beach..." defaultValue={editingOption?.description ?? ""} /></FieldLabel>
+                  <FieldLabel>Best time to visit<Input name="famousFor" placeholder="Breakfast / brunch, sunset, evening..." defaultValue={editingOption?.famousFor ?? ""} /></FieldLabel>
+                  <FieldLabel>Recommendations / constraints<Input name="notes" placeholder="What to try, booking, warnings, last verified..." defaultValue={editingOption?.notes ?? ""} /></FieldLabel>
+                  {activeCategory === "stay" ? (
+                    <>
+                      <FieldLabel>Total cost<Input name="totalCost" type="number" min="0" placeholder="INR" defaultValue={editingOption?.totalCost ?? ""} /></FieldLabel>
+                      <FieldLabel>Per-person cost<Input name="perPersonCost" type="number" min="0" placeholder="INR" defaultValue={editingOption?.perPersonCost ?? ""} /></FieldLabel>
+                      <FieldLabel>Capacity notes<Input name="capacityNotes" placeholder="Beds, rooms, rules" defaultValue={editingOption?.capacityNotes ?? ""} /></FieldLabel>
+                    </>
+                  ) : null}
+                </div>
+                <div className="rounded-lg border border-dashed border-border bg-background/65 p-3 text-sm text-mutedText">
+                  Maps links auto-open with Google Maps search when no URL is pasted. Photo storage is local for now; use the photos button on each place card.
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button type="submit" disabled={busy} className="w-full sm:w-fit">
+                    {editingOption ? <Save size={17} /> : <Plus size={17} />}
+                    {editingOption ? "Update place" : "Add place"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => { setOptionModalOpen(false); setEditingOption(null); }}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
       <MobileBottomNav activePage={activePage} setActivePage={setActivePage} />
       {message ? <div className="fixed bottom-24 right-4 z-50 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-white shadow-coastal lg:bottom-5">{message}</div> : null}
     </main>
@@ -874,22 +930,55 @@ function TripOptionCard({
   onDelete: (optionId: string) => void;
 }) {
   const Icon = categoryIcons[option.category];
+  const constraints = constraintsFor(option);
+  const priority = priorityFor(option);
+  const [photosOpen, setPhotosOpen] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(`pondi-place-photos-${option.id}`);
+    if (stored) setPhotos(JSON.parse(stored) as string[]);
+  }, [option.id]);
+
+  useEffect(() => {
+    window.localStorage.setItem(`pondi-place-photos-${option.id}`, JSON.stringify(photos));
+  }, [option.id, photos]);
+
+  function addPhoto() {
+    if (!photoUrl.trim()) return;
+    setPhotos((current) => [photoUrl.trim(), ...current]);
+    setPhotoUrl("");
+    setPhotosOpen(true);
+  }
+
   return (
     <Card className={cn("shadow-ticket", option.category === "stay" && "bg-gradient-to-br from-white to-background")}>
       <CardContent className="p-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <Badge variant="secondary" className="mb-3">
-              <Icon size={13} className="mr-1" />
-              {categoryLabels[option.category]}
-            </Badge>
+            <div className="mb-3 flex flex-wrap gap-2">
+              <Badge variant="secondary">
+                <Icon size={13} className="mr-1" />
+                {categoryLabels[option.category]}
+              </Badge>
+              <Badge variant={priority === "Must Visit" ? "accent" : priority === "Optional" ? "outline" : "highlight"}>{priority}</Badge>
+              {option.famousFor ? <Badge variant="outline">Best: {option.famousFor}</Badge> : null}
+            </div>
             <h3 className="text-xl font-black text-primary">{option.name}</h3>
             <p className="mt-1 flex items-center gap-2 text-sm text-mutedText">
               <MapPin size={15} />
               {option.location}
             </p>
-            <p className="mt-3 text-sm leading-6 text-text">{option.description || option.famousFor || option.notes || "No notes yet."}</p>
-            {option.famousFor ? <p className="mt-1 text-sm text-mutedText">Famous for: {option.famousFor}</p> : null}
+            <p className="mt-3 text-sm font-bold text-primary">{option.description || "Travel place"}</p>
+            <p className="mt-1 text-sm leading-6 text-text">{option.notes || "No recommendations yet."}</p>
+            {constraints.length ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {constraints.map((constraint) => (
+                  <Badge key={constraint} variant="highlight">{constraint}</Badge>
+                ))}
+              </div>
+            ) : null}
             {option.category === "stay" ? (
               <p className="mt-2 text-sm font-bold text-secondary">
                 Total {money(option.totalCost)} - Per person {money(option.perPersonCost)} - {option.capacityNotes || "Capacity TBD"}
@@ -903,13 +992,12 @@ function TripOptionCard({
         </div>
         <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-2">
-            {option.link ? (
-              <Button asChild variant="outline" size="sm">
-                <a href={option.link} target="_blank" rel="noreferrer">Open link</a>
-              </Button>
-            ) : (
-              <span className="self-center text-xs text-mutedText">No link added</span>
-            )}
+            <Button asChild variant="outline" size="sm">
+              <a href={mapUrlFor(option)} target="_blank" rel="noreferrer">Open Map</a>
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setPhotosOpen((open) => !open)}>
+              {photos.length ? "View Photos" : "Add Photos"}
+            </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => onEdit(option)}>
               <Edit2 size={14} />
               Edit
@@ -940,6 +1028,28 @@ function TripOptionCard({
             ) : null}
           </div>
         </div>
+        {photosOpen ? (
+          <div className="mt-4 rounded-lg border border-dashed border-border bg-background/65 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input value={photoUrl} onChange={(event) => setPhotoUrl(event.target.value)} placeholder="Paste image URL for this place" />
+              <Button type="button" onClick={addPhoto}>Add Photo</Button>
+            </div>
+            {photos.length ? (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {photos.map((photo) => (
+                  <div key={photo} className="overflow-hidden rounded-lg border border-border bg-white">
+                    <img src={photo} alt={`${option.name} memory`} className="h-28 w-full object-cover" />
+                    <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setPhotos((current) => current.filter((item) => item !== photo))}>
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-mutedText">No photos yet. Add your first memory from this place.</p>
+            )}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
