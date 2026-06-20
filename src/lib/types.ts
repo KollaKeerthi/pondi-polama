@@ -49,6 +49,9 @@ export type RankedOption = TripOption & {
 
 export type ItineraryStop = {
   time: string;
+  arrivalTime: string;
+  commuteDuration: string;
+  commuteDistance: string;
   optionId: string;
   optionName: string;
   category: Category;

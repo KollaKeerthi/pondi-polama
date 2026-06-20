@@ -3,9 +3,13 @@ import { categories, tripDates } from "./types";
 
 export const travelerSchema = z.object({
   name: z.string().min(1).max(80),
+  age: z.coerce.number().int().min(0).max(120).default(0),
+  gender: z.enum(["Female", "Male"]).default("Female"),
   isOrganizer: z.boolean().default(false),
   attendance: z.array(z.enum(tripDates)).min(1)
 });
+
+export const travelerUpdateSchema = travelerSchema.omit({ isOrganizer: true }).partial();
 
 export const optionSchema = z.object({
   category: z.enum(categories),

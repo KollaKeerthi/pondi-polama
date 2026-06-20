@@ -15,9 +15,10 @@ function cleanNumber(value: number | null | undefined) {
 }
 
 function syncSeedTravelers(state: TripState): TripState {
+  const existingById = new Map(state.travelers.map((traveler) => [traveler.id, traveler]));
   return {
     ...state,
-    travelers: createInitialState().travelers
+    travelers: createInitialState().travelers.map((traveler) => existingById.get(traveler.id) ?? traveler)
   };
 }
 
@@ -117,11 +118,7 @@ async function ensureDb() {
         ${JSON.stringify(traveler.attendance)}::jsonb
       )
       on conflict (id) do update set
-        name = excluded.name,
-        age = excluded.age,
-        gender = excluded.gender,
-        is_organizer = excluded.is_organizer,
-        attendance = excluded.attendance
+        is_organizer = excluded.is_organizer
     `;
   }
 
@@ -378,6 +375,54 @@ export async function deleteRating(optionId: string, travelerId: string) {
 
   const rows = await sql`delete from ratings where option_id = ${optionId} and traveler_id = ${travelerId} returning id`;
   return rows.length > 0;
+}
+
+export async function updateTraveler(travelerId: string, input: Partial<Omit<Traveler, "id" | "isOrganizer">>) {
+  const sql = await ensureDb();
+
+  if (!sql) {
+    const state = await localState();
+    const existing = state.travelers.find((traveler) => traveler.id === travelerId);
+    if (!existing) return null;
+    const updated: Traveler = {
+      ...existing,
+      ...input,
+      attendance: input.attendance ?? existing.attendance
+    };
+    state.travelers = state.travelers.map((traveler) => (traveler.id === travelerId ? updated : traveler));
+    await writeLocalState(state);
+    return updated;
+  }
+
+  const current = await sql`select id, name, age, gender, is_organizer, attendance from travelers where id = ${travelerId}`;
+  if (current.length === 0) return null;
+  const row = current[0];
+  const updated = {
+    name: input.name ?? row.name,
+    age: input.age ?? Number(row.age),
+    gender: input.gender ?? row.gender,
+    attendance: input.attendance ?? row.attendance
+  };
+
+  const rows = await sql`
+    update travelers set
+      name = ${updated.name},
+      age = ${updated.age},
+      gender = ${updated.gender},
+      attendance = ${JSON.stringify(updated.attendance)}::jsonb
+    where id = ${travelerId}
+    returning id, name, age, gender, is_organizer, attendance
+  `;
+
+  const saved = rows[0];
+  return {
+    id: String(saved.id),
+    name: String(saved.name),
+    age: Number(saved.age),
+    gender: saved.gender === "Male" ? "Male" : "Female",
+    isOrganizer: Boolean(saved.is_organizer),
+    attendance: saved.attendance
+  } as Traveler;
 }
 
 export async function saveItinerary(itinerary: ItineraryCandidate) {

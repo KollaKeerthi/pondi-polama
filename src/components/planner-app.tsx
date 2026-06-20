@@ -302,20 +302,17 @@ function PondicherryHero({
   setActivePage: (page: PageId) => void;
 }) {
   return (
-    <section id="dashboard" className="relative mx-auto grid max-w-[1500px] items-center gap-10 px-4 pb-12 pt-8 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-12 lg:pb-20">
+    <section id="dashboard" className="relative mx-auto grid max-w-[1500px] items-center gap-8 px-4 pb-4 pt-2 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-12 lg:pb-6">
       <div className="relative z-10">
-        <h1 className="font-serif text-[4.8rem] font-bold leading-[0.9] text-[#0F3331] sm:text-[7.6rem] lg:text-[8.7rem]">
-          Pondicherry<br />Escape<span className="text-[#E86F91]">.</span>
+        <h1 className="font-serif text-[4.4rem] font-bold leading-[0.9] text-[#0F3331] sm:text-[7rem] lg:text-[8rem]">
+          Pondicherry<br />Polama<span className="text-[#E86F91]">.</span>
         </h1>
-        <p className="mt-8 max-w-xl text-xl leading-8 text-[#6F7775]">
-          French streets, ocean breeze and unforgettable moments with your people.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-4">
+        <div className="mt-7 flex flex-wrap gap-4">
           <InfoPill icon={CalendarDays} label="1 - 4 Aug, 2026" />
           <InfoPill icon={Users} label={`${travelers.length} Travellers`} />
           <InfoPill icon={Sparkles} label="28 C Sunny" />
         </div>
-        <div className="mt-12 flex flex-col gap-4 sm:flex-row">
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row">
           <Button type="button" onClick={() => setActivePage("itinerary")} className="h-14 rounded-full bg-[#E3A91A] px-9 text-base text-white hover:bg-[#cf9917]">
             View Itinerary
             <Navigation size={18} />
@@ -325,12 +322,12 @@ function PondicherryHero({
           </Button>
         </div>
       </div>
-      <div className="relative min-h-[420px] lg:min-h-[680px]">
+      <div className="relative min-h-[340px] lg:min-h-[560px]">
         <div className="absolute inset-10 rounded-[48%_52%_45%_55%/45%_35%_65%_55%] bg-[#B9D7EA]/55" />
         <div className="absolute left-0 top-24 z-20 opacity-70"><DecorativeStamp /></div>
         <div className="absolute right-4 top-28 z-20 scale-125"><DecorativeWaves /></div>
         <div className="absolute inset-x-5 top-8 overflow-hidden rounded-[44%_56%_47%_53%/42%_35%_65%_58%] border border-dashed border-[#0F3331]/22 bg-white p-3 shadow-[0_30px_80px_rgba(15,51,49,0.12)] lg:inset-x-16">
-          <Image src="/images/pondicherry/hero.svg" alt="Pondicherry French street illustration" width={900} height={680} priority className="h-full min-h-[390px] w-full rounded-[44%_56%_47%_53%/42%_35%_65%_58%] object-cover" />
+          <Image src="/images/pondicherry/hero.svg" alt="Pondicherry French street illustration" width={900} height={680} priority className="h-full min-h-[320px] w-full rounded-[44%_56%_47%_53%/42%_35%_65%_58%] object-cover lg:min-h-[500px]" />
         </div>
       </div>
     </section>
@@ -381,7 +378,7 @@ function LandingCategoryCards({
   setActiveCategory: (category: Category) => void;
 }) {
   return (
-    <section className="mx-auto grid max-w-[1500px] gap-5 px-4 pb-10 sm:px-8 md:grid-cols-2 lg:grid-cols-3 lg:px-12 xl:grid-cols-6">
+    <section className="mx-auto grid max-w-[1500px] gap-5 px-4 pb-8 sm:px-8 md:grid-cols-2 lg:-mt-4 lg:grid-cols-3 lg:px-12 xl:grid-cols-6">
       {landingCategoryMeta.map((item) => {
         const count = item.category ? state.options.filter((option) => option.category === item.category).length : state.itineraryCandidates[0]?.days.length ?? tripDates.length;
         const subtitle = item.category
@@ -416,111 +413,8 @@ function LandingCategoryCards({
   );
 }
 
-function DashboardEditorial({
-  state,
-  stayOptions,
-  totalStayBudget
-}: {
-  state: StateResponse;
-  stayOptions: RankedOption[];
-  totalStayBudget: number;
-}) {
-  const nextStop = state.savedItinerary?.days.flatMap((day) => day.stops)[0] ?? state.itineraryCandidates[0]?.days.flatMap((day) => day.stops)[0];
-  const nextTitle = nextStop?.optionName ?? "Auroville Visit & Cafes";
-  const nextArea = nextStop?.location ?? "Auroville, Pondicherry";
-  const displayBudget = totalStayBudget || 60000;
-  const spent = Math.round(displayBudget * 0.63);
-  const remaining = displayBudget - spent;
-
-  return (
-    <>
-      <section className="mx-auto grid max-w-[1500px] gap-6 px-4 pb-10 sm:px-8 lg:grid-cols-[0.9fr_1.1fr_0.85fr] lg:px-12">
-        <div className="relative overflow-hidden py-4">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#E86F91]">About this trip</p>
-          <h2 className="mt-5 font-serif text-5xl leading-[0.95] text-[#0F3331]">
-            Slow days.<br />Good company.<br />Great memories<span className="text-[#E86F91]">.</span>
-          </h2>
-          <p className="mt-6 max-w-sm text-sm leading-7 text-[#6F7775]">
-            From sunrise walks to late night gelato runs, here's everything we have planned for our Pondicherry escape.
-          </p>
-          <p className="mt-7 font-serif text-2xl italic text-[#E86F91]">Let the good times roll!</p>
-          <div className="absolute bottom-0 left-0 h-16 w-full opacity-35">
-            <svg viewBox="0 0 420 80" fill="none" aria-hidden="true">
-              <path d="M0 72H420M16 72V44H48V72M64 72V36H108V72M128 72V50H184V72M220 72V28M220 28C238 38 252 42 272 36M220 28C204 40 194 48 186 64" stroke="#6BA2CC" strokeWidth="2" />
-            </svg>
-          </div>
-        </div>
-
-        <div className="relative rounded-[1.25rem] border border-[#E9E2D6] bg-white/76 p-5 shadow-[0_22px_60px_rgba(15,51,49,0.06)]">
-          <Badge variant="secondary" className="mb-4">Next up</Badge>
-          <div className="grid gap-4 sm:grid-cols-[1fr_220px]">
-            <div className="rounded-[1rem] border border-[#E9E2D6] bg-white p-5">
-              <p className="text-xs font-semibold text-[#6F7775]">Day 2 - 10:30 AM</p>
-              <h3 className="mt-4 font-serif text-3xl leading-tight text-[#0F3331]">{nextTitle}</h3>
-              <p className="mt-4 flex items-center gap-2 text-sm text-[#6F7775]"><MapPin size={15} /> {nextArea}</p>
-              <div className="mt-6 flex -space-x-2">
-                {state.travelers.slice(0, 5).map((traveler) => (
-                  <span key={traveler.id} className="grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-[#B9D7EA] text-[10px] font-black text-[#0F3331]">
-                    {traveler.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}
-                  </span>
-                ))}
-                <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-[#F3E8D4] text-xs font-bold text-[#6F7775]">+{Math.max(state.travelers.length - 5, 0)}</span>
-              </div>
-            </div>
-            <div className="relative min-h-[250px] overflow-hidden rounded-[1rem]">
-              <Image src="/images/pondicherry/auroville.svg" alt="Auroville stop" fill className="object-cover" />
-              <span className="absolute -right-5 top-5 h-8 w-24 rotate-45 bg-[#F1D68F]/80" />
-            </div>
-          </div>
-          <button type="button" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#5F9388]">
-            View full itinerary <Navigation size={16} />
-          </button>
-        </div>
-
-        <div className="rounded-[1.25rem] border border-[#E9E2D6] bg-white/76 p-7 shadow-[0_22px_60px_rgba(15,51,49,0.06)]">
-          <Badge variant="secondary" className="mb-10">Budget overview</Badge>
-          <p className="text-sm text-[#6F7775]">Total Budget</p>
-          <p className="mt-2 font-serif text-4xl text-[#0F3331]">{money(displayBudget)}</p>
-          <Progress value={63} className="mt-8" />
-          <div className="mt-8 grid grid-cols-2 gap-5 text-sm">
-            <div>
-              <p className="text-[#6F7775]">Spent</p>
-              <p className="mt-2 font-bold text-[#5F9388]">{money(spent)}</p>
-            </div>
-            <div>
-              <p className="text-[#6F7775]">Remaining</p>
-              <p className="mt-2 font-bold text-[#E86F91]">{money(remaining)}</p>
-            </div>
-          </div>
-          <p className="mt-8 text-xs text-[#6F7775]">{stayOptions.length ? "Based on saved stay costs." : "Estimate until stays are added."}</p>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-[1500px] px-4 pb-12 sm:px-8 lg:px-12">
-        <div className="grid gap-5 rounded-[1.25rem] bg-[#DCEDEA] p-6 sm:grid-cols-[260px_1fr] lg:p-8">
-          <div className="flex items-center">
-            <p className="font-serif text-3xl leading-tight text-[#0F3331]"><span className="text-5xl text-[#5F9388]">"</span><br />Collect moments,<br />not things.</p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["/images/pondicherry/beach.svg", "Beach morning"],
-              ["/images/pondicherry/french-street.svg", "French street"],
-              ["/images/pondicherry/sunset.svg", "Sunset lighthouse"],
-              ["/images/pondicherry/pink-building.svg", "Heritage house"]
-            ].map(([src, alt]) => (
-              <div key={src} className="relative min-h-[180px] overflow-hidden rounded-[1rem] bg-white">
-                <Image src={src} alt={alt} fill className="object-cover" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
-
 function StatusBadge({ status }: { status: string }) {
-  const variant = status === "Done" ? "secondary" : status === "Pending" ? "accent" : "outline";
+  const variant = status === "Done" ? "secondary" : status === "Open" ? "accent" : "outline";
   return <Badge variant={variant}>{status}</Badge>;
 }
 
@@ -594,7 +488,7 @@ function LocalCrudSection({
   return (
     <Card>
       <CardHeader>
-        <PageHeader eyebrow="CRUD" title={title} description={description} />
+        <PageHeader eyebrow="Planner" title={title} description={description} />
       </CardHeader>
       <CardContent className="grid gap-4">
         <form key={editingId ?? "new"} onSubmit={submitItem} className="grid gap-3 rounded-lg border border-dashed border-border bg-background/55 p-4 md:grid-cols-2">
@@ -631,7 +525,7 @@ function LocalCrudSection({
                     <div className="mt-3 flex flex-wrap gap-2">
                       {item.meta ? <Badge variant="secondary">{item.meta}</Badge> : null}
                       {item.amount ? <Badge variant="accent">{item.amount}</Badge> : null}
-                      <StatusBadge status={item.done ? "Done" : "Pending"} />
+                      <StatusBadge status={item.done ? "Done" : "Open"} />
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -818,6 +712,18 @@ export default function PlannerApp() {
     await loadState();
   }
 
+  async function updateTravelerDetails(travelerId: string, input: Partial<Omit<Traveler, "id" | "isOrganizer">>) {
+    setBusy(true);
+    const response = await fetch(`/api/travelers/${travelerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input)
+    });
+    setBusy(false);
+    setMessage(response.ok ? "Traveler updated." : "Could not update traveler.");
+    await loadState();
+  }
+
   if (!unlocked) {
     return (
       <main className="min-h-screen px-4 py-8 sm:grid sm:place-items-center">
@@ -886,7 +792,6 @@ export default function PlannerApp() {
         <>
           <PondicherryHero travelers={state.travelers} setActivePage={setActivePage} />
           <LandingCategoryCards state={state} setActivePage={setActivePage} setActiveCategory={setActiveCategory} />
-          <DashboardEditorial state={state} stayOptions={stayOptions} totalStayBudget={totalStayBudget} />
         </>
       ) : null}
 
@@ -1025,7 +930,7 @@ export default function PlannerApp() {
           </section>
 
           <section id="group" className={cn(activePage !== "group" && "hidden")}>
-            <GroupMembers travelers={state.travelers} />
+            <GroupMembers travelers={state.travelers} onUpdateTraveler={updateTravelerDetails} busy={busy} />
           </section>
 
           <section id="packing" className={cn("grid gap-5", activePage !== "packing" && "hidden")} >
@@ -1318,12 +1223,15 @@ function ItineraryTimeline({
               {day.stops.length ? (
                 day.stops.map((stop) => (
                   <div key={`${candidate.id}-${day.date}-${stop.optionId}`} className="rounded-lg border border-border bg-background/55 p-3">
-                    <div className="grid gap-1 sm:grid-cols-[76px_1fr]">
-                      <span className="text-sm font-black text-accent">{stop.time}</span>
+                    <div className="grid gap-2 sm:grid-cols-[120px_1fr]">
+                      <div>
+                        <span className="block text-sm font-black text-accent">Reach {stop.arrivalTime ?? stop.time}</span>
+                        <span className="mt-1 block text-xs font-bold text-mutedText">{stop.commuteDuration ?? "Estimate TBD"} - {stop.commuteDistance ?? "-"}</span>
+                      </div>
                       <div>
                         <p className="font-black text-primary">{stop.optionName}</p>
                         <p className="text-sm text-mutedText">{categoryLabels[stop.category]} - {stop.location}</p>
-                        <p className="mt-1 text-xs leading-5 text-mutedText">Assigned: Everyone - Booking: To confirm - Cost: If available</p>
+                        <p className="mt-1 text-xs leading-5 text-mutedText">{stop.reason} Commute is estimated from known Pondicherry areas; verify live traffic before finalizing.</p>
                       </div>
                     </div>
                   </div>
@@ -1464,33 +1372,96 @@ function ExpensesSection({ stayOptions, totalStayBudget }: { stayOptions: Ranked
   );
 }
 
-function GroupMembers({ travelers }: { travelers: Traveler[] }) {
+function GroupMembers({
+  travelers,
+  onUpdateTraveler,
+  busy
+}: {
+  travelers: Traveler[];
+  onUpdateTraveler: (travelerId: string, input: Partial<Omit<Traveler, "id" | "isOrganizer">>) => void;
+  busy: boolean;
+}) {
+  const [editingTraveler, setEditingTraveler] = useState<Traveler | null>(null);
+
+  function submitTraveler(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingTraveler) return;
+    const form = new FormData(event.currentTarget);
+    const attendance = tripDates.filter((date) => form.get(date) === "on");
+    onUpdateTraveler(editingTraveler.id, {
+      name: String(form.get("name") ?? editingTraveler.name),
+      age: Number(form.get("age") ?? editingTraveler.age),
+      gender: form.get("gender") === "Male" ? "Male" : "Female",
+      attendance
+    });
+    setEditingTraveler(null);
+  }
+
   return (
     <div className="grid gap-5">
       <Card id="group">
         <CardHeader>
-          <PageHeader eyebrow="Travel crew" title="Group members" description="Friendly member cards with attendance, payment status, and task placeholders." />
+          <PageHeader eyebrow="Travel crew" title="Group members" description="Edit traveler details and day-wise attendance for the Pondicherry trip." />
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
-          {travelers.map((traveler, index) => (
-            <MemberCard key={traveler.id} traveler={traveler} index={index} />
+          {travelers.map((traveler) => (
+            <MemberCard key={traveler.id} traveler={traveler} onEdit={() => setEditingTraveler(traveler)} />
           ))}
         </CardContent>
       </Card>
-      <LocalCrudSection
-        storageKey="pondi-group-tasks"
-        title="Group Tasks"
-        description="Create, edit, complete, and delete assignments without changing the fixed traveler roster."
-        icon={Users}
-        titlePlaceholder="e.g. Carry Bluetooth speaker"
-        detailPlaceholder="Task notes or backup person"
-        metaPlaceholder="Assigned person"
-      />
+      {editingTraveler ? (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-primary/35 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-xl">
+            <CardHeader className="border-b border-border">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Badge variant="highlight">Edit traveler</Badge>
+                  <CardTitle className="mt-3">{editingTraveler.name}</CardTitle>
+                  <CardDescription>Update profile and attendance. Organizer status stays hidden and unchanged.</CardDescription>
+                </div>
+                <Button type="button" variant="outline" onClick={() => setEditingTraveler(null)}>
+                  Close
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5">
+              <form key={editingTraveler.id} onSubmit={submitTraveler} className="grid gap-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FieldLabel>Name<Input name="name" required defaultValue={editingTraveler.name} /></FieldLabel>
+                  <FieldLabel>Age<Input name="age" type="number" min="0" max="120" required defaultValue={editingTraveler.age} /></FieldLabel>
+                  <FieldLabel>
+                    Gender
+                    <Select name="gender" defaultValue={editingTraveler.gender}>
+                      <option value="Female">Female</option>
+                      <option value="Male">Male</option>
+                    </Select>
+                  </FieldLabel>
+                </div>
+                <div className="rounded-lg border border-border bg-background/55 p-4">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wide text-mutedText">Attendance</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {tripDates.map((date) => (
+                      <label key={date} className="flex items-center gap-3 rounded-lg border border-border bg-white p-3 text-sm font-bold text-primary">
+                        <Checkbox name={date} defaultChecked={editingTraveler.attendance.includes(date)} />
+                        {prettyDate(date, "long")}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <Button type="submit" disabled={busy} className="w-full sm:w-fit">
+                  <Save size={16} />
+                  Save traveler
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function MemberCard({ traveler, index }: { traveler: Traveler; index: number }) {
+function MemberCard({ traveler, onEdit }: { traveler: Traveler; onEdit: () => void }) {
   const initials = traveler.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   return (
     <div className="rounded-lg border border-border bg-white p-4 shadow-ticket">
@@ -1504,11 +1475,15 @@ function MemberCard({ traveler, index }: { traveler: Traveler; index: number }) 
             Age {traveler.age} - {traveler.gender} - {traveler.attendance.length}/4 trip days
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <StatusBadge status={index % 3 === 0 ? "Pending" : "TBD"} />
-            <Badge variant="secondary">Tasks TBD</Badge>
-            <Badge variant="outline">Food pref TBD</Badge>
+            {traveler.attendance.map((date) => (
+              <Badge key={date} variant="outline">{prettyDate(date)}</Badge>
+            ))}
           </div>
         </div>
+        <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+          <Edit2 size={14} />
+          Edit
+        </Button>
       </div>
     </div>
   );
