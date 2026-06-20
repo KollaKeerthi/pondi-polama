@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Coffee,
   CreditCard,
+  Edit2,
   Hotel,
   Lock,
   Map,
@@ -24,6 +25,7 @@ import {
   Sparkles,
   Star,
   Ticket,
+  Trash2,
   Train,
   Umbrella,
   Users,
@@ -79,6 +81,7 @@ const categoryIcons: Record<Category, React.ElementType> = {
 
 const desktopNav = [
   ["Dashboard", "dashboard", Map],
+  ["Plan", "plan", Navigation],
   ["Itinerary", "itinerary", CalendarDays],
   ["Bookings", "bookings", Ticket],
   ["Expenses", "expenses", CreditCard],
@@ -96,6 +99,17 @@ const mobileNav = [
   ["Group", "group", Users],
   ["More", "more", Sparkles]
 ] as const;
+
+type PageId = (typeof desktopNav)[number][1] | "more";
+
+type LocalCrudItem = {
+  id: string;
+  title: string;
+  detail: string;
+  meta: string;
+  amount?: string;
+  done?: boolean;
+};
 
 const packingGroups = [
   ["Documents", ["ID proof", "Hotel confirmation", "Train or bus tickets"]],
@@ -147,7 +161,7 @@ function PageHeader({ eyebrow, title, description }: { eyebrow: string; title: s
   );
 }
 
-function DesktopSidebar() {
+function DesktopSidebar({ activePage, setActivePage }: { activePage: PageId; setActivePage: (page: PageId) => void }) {
   return (
     <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-64 shrink-0 flex-col rounded-lg border border-border bg-white/82 p-4 shadow-coastal backdrop-blur lg:flex">
       <div className="mb-6 flex items-center gap-3">
@@ -159,10 +173,18 @@ function DesktopSidebar() {
       </div>
       <nav className="grid gap-1">
         {desktopNav.map(([label, href, Icon]) => (
-          <a key={href} href={`#${href}`} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-bold text-primary hover:bg-muted/55">
+          <button
+            key={href}
+            type="button"
+            onClick={() => setActivePage(href)}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-primary hover:bg-muted/55",
+              activePage === href && "bg-muted/70 text-secondary"
+            )}
+          >
             <Icon size={17} />
             {label}
-          </a>
+          </button>
         ))}
       </nav>
       <div className="mt-auto rounded-lg border border-dashed border-highlight/50 bg-highlight/10 p-3 text-xs leading-5 text-primary">
@@ -172,14 +194,22 @@ function DesktopSidebar() {
   );
 }
 
-function MobileBottomNav() {
+function MobileBottomNav({ activePage, setActivePage }: { activePage: PageId; setActivePage: (page: PageId) => void }) {
   return (
     <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-lg border border-border bg-white/92 p-1 shadow-coastal backdrop-blur lg:hidden">
       {mobileNav.map(([label, href, Icon]) => (
-        <a key={href} href={`#${href}`} className="grid place-items-center gap-1 rounded-md px-2 py-2 text-[11px] font-bold text-primary hover:bg-muted/55">
+        <button
+          key={href}
+          type="button"
+          onClick={() => setActivePage(href)}
+          className={cn(
+            "grid place-items-center gap-1 rounded-md px-2 py-2 text-[11px] font-bold text-primary hover:bg-muted/55",
+            activePage === href && "bg-muted/70 text-secondary"
+          )}
+        >
           <Icon size={17} />
           {label}
-        </a>
+        </button>
       ))}
     </nav>
   );
@@ -274,12 +304,134 @@ function EmptyState({ icon: Icon, title, description }: { icon: React.ElementTyp
   );
 }
 
+function useLocalItems(storageKey: string, initialItems: LocalCrudItem[] = []) {
+  const [items, setItems] = useState<LocalCrudItem[]>(initialItems);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(storageKey);
+    if (stored) setItems(JSON.parse(stored) as LocalCrudItem[]);
+  }, [storageKey]);
+
+  useEffect(() => {
+    window.localStorage.setItem(storageKey, JSON.stringify(items));
+  }, [items, storageKey]);
+
+  return [items, setItems] as const;
+}
+
+function LocalCrudSection({
+  storageKey,
+  title,
+  description,
+  icon: Icon,
+  titlePlaceholder,
+  detailPlaceholder,
+  metaPlaceholder,
+  amountPlaceholder,
+  initialItems = []
+}: {
+  storageKey: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  titlePlaceholder: string;
+  detailPlaceholder: string;
+  metaPlaceholder: string;
+  amountPlaceholder?: string;
+  initialItems?: LocalCrudItem[];
+}) {
+  const [items, setItems] = useLocalItems(storageKey, initialItems);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editingItem = items.find((item) => item.id === editingId);
+
+  function submitItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const item: LocalCrudItem = {
+      id: editingId ?? crypto.randomUUID(),
+      title: String(form.get("title") ?? ""),
+      detail: String(form.get("detail") ?? ""),
+      meta: String(form.get("meta") ?? ""),
+      amount: String(form.get("amount") ?? ""),
+      done: editingItem?.done ?? false
+    };
+
+    setItems((current) => (editingId ? current.map((entry) => (entry.id === editingId ? item : entry)) : [item, ...current]));
+    setEditingId(null);
+    event.currentTarget.reset();
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <PageHeader eyebrow="CRUD" title={title} description={description} />
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <form key={editingId ?? "new"} onSubmit={submitItem} className="grid gap-3 rounded-lg border border-dashed border-border bg-background/55 p-4 md:grid-cols-2">
+          <FieldLabel>Title<Input name="title" required placeholder={titlePlaceholder} defaultValue={editingItem?.title ?? ""} /></FieldLabel>
+          <FieldLabel>Detail<Input name="detail" placeholder={detailPlaceholder} defaultValue={editingItem?.detail ?? ""} /></FieldLabel>
+          <FieldLabel>Meta<Input name="meta" placeholder={metaPlaceholder} defaultValue={editingItem?.meta ?? ""} /></FieldLabel>
+          {amountPlaceholder ? <FieldLabel>Amount<Input name="amount" placeholder={amountPlaceholder} defaultValue={editingItem?.amount ?? ""} /></FieldLabel> : null}
+          <div className="flex gap-2 md:col-span-2">
+            <Button type="submit">
+              {editingId ? <Save size={16} /> : <Plus size={16} />}
+              {editingId ? "Update" : "Add"}
+            </Button>
+            {editingId ? (
+              <Button type="button" variant="outline" onClick={() => setEditingId(null)}>
+                Cancel
+              </Button>
+            ) : null}
+          </div>
+        </form>
+
+        {items.length === 0 ? (
+          <EmptyState icon={Icon} title={`No ${title.toLowerCase()} yet`} description="Add the first item, then edit, complete, or delete it from here." />
+        ) : (
+          <div className="grid gap-3">
+            {items.map((item) => (
+              <div key={item.id} className="rounded-lg border border-border bg-white p-4 shadow-ticket">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox checked={Boolean(item.done)} onChange={(event) => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, done: event.currentTarget.checked } : entry))} />
+                      <h3 className={cn("font-black text-primary", item.done && "text-mutedText line-through")}>{item.title}</h3>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-mutedText">{item.detail || "No detail added."}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {item.meta ? <Badge variant="secondary">{item.meta}</Badge> : null}
+                      {item.amount ? <Badge variant="accent">{item.amount}</Badge> : null}
+                      <StatusBadge status={item.done ? "Done" : "Pending"} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setEditingId(item.id)}>
+                      <Edit2 size={14} />
+                      Edit
+                    </Button>
+                    <Button type="button" variant="stamp" size="sm" onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}>
+                      <Trash2 size={14} />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function PlannerApp() {
   const [enteredCode, setEnteredCode] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [state, setState] = useState<StateResponse | null>(null);
   const [activeTraveler, setActiveTraveler] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("stay");
+  const [activePage, setActivePage] = useState<PageId>("dashboard");
+  const [editingOption, setEditingOption] = useState<RankedOption | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [checkedPacking, setCheckedPacking] = useState<Record<string, boolean>>({});
@@ -325,7 +477,7 @@ export default function PlannerApp() {
     }
   }
 
-  async function addNewOption(event: FormEvent<HTMLFormElement>) {
+  async function submitOption(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!activeTraveler) return;
     const form = new FormData(event.currentTarget);
@@ -346,20 +498,35 @@ export default function PlannerApp() {
       createdBy: activeTraveler
     };
 
-    const response = await fetch("/api/options", {
-      method: "POST",
+    const response = await fetch(editingOption ? `/api/options/${editingOption.id}` : "/api/options", {
+      method: editingOption ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
 
     setBusy(false);
     if (!response.ok) {
-      setMessage("Could not add that option. Check the required fields.");
+      setMessage(editingOption ? "Could not update that option." : "Could not add that option. Check the required fields.");
       return;
     }
 
     event.currentTarget.reset();
-    setMessage("Option added for the group.");
+    setEditingOption(null);
+    setMessage(editingOption ? "Option updated for the group." : "Option added for the group.");
+    await loadState();
+  }
+
+  function startEditOption(option: RankedOption) {
+    setActiveCategory(option.category);
+    setActivePage("plan");
+    setEditingOption(option);
+  }
+
+  async function deleteTripOption(optionId: string) {
+    setBusy(true);
+    const response = await fetch(`/api/options/${optionId}`, { method: "DELETE" });
+    setBusy(false);
+    setMessage(response.ok ? "Option deleted." : "Could not delete that option.");
     await loadState();
   }
 
@@ -370,6 +537,18 @@ export default function PlannerApp() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ optionId, travelerId: activeTraveler, stars, comment: "" })
+    });
+    setBusy(false);
+    await loadState();
+  }
+
+  async function clearRating(optionId: string) {
+    if (!activeTraveler) return;
+    setBusy(true);
+    await fetch("/api/ratings", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ optionId, travelerId: activeTraveler })
     });
     setBusy(false);
     await loadState();
@@ -437,7 +616,7 @@ export default function PlannerApp() {
   return (
     <main className="min-h-screen pb-24 lg:pb-8">
       <div className="mx-auto flex max-w-[1600px] gap-5 p-3 sm:p-5">
-        <DesktopSidebar />
+        <DesktopSidebar activePage={activePage} setActivePage={setActivePage} />
         <div className="min-w-0 flex-1 space-y-5">
           <header id="settings" className="flex flex-col gap-3 rounded-lg border border-border bg-white/80 p-4 shadow-ticket backdrop-blur md:flex-row md:items-end md:justify-between">
             <div>
@@ -461,9 +640,9 @@ export default function PlannerApp() {
             </div>
           </header>
 
-          <PondicherryHero travelers={state.travelers} options={state.options} savedItinerary={state.savedItinerary} />
+          {activePage === "dashboard" ? <PondicherryHero travelers={state.travelers} options={state.options} savedItinerary={state.savedItinerary} /> : null}
 
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <section className={cn("grid gap-3 md:grid-cols-2 xl:grid-cols-5", activePage !== "dashboard" && "hidden")}>
             {tripDates.map((date) => {
               const count = state.travelers.filter((traveler) => traveler.attendance.includes(date)).length;
               return <TripCard key={date} label={prettyDate(date)} value={`${count} people`} icon={CalendarDays} />;
@@ -471,7 +650,7 @@ export default function PlannerApp() {
             <TripCard label="Must-haves" value={`${requiredStarted}/4 started`} icon={CheckCircle2} />
           </section>
 
-          <section id="plan" className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]">
+          <section id="plan" className={cn("grid gap-5", activePage !== "plan" && "hidden")}>
             <Card>
               <CardHeader>
                 <PageHeader eyebrow="Coastal map" title="Options and group ratings" description="Add places by category, rate them with stars, and keep the full voting pool visible to everyone." />
@@ -503,26 +682,33 @@ export default function PlannerApp() {
                     <CardDescription>{categoryHints[activeCategory]}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form className="grid gap-4" onSubmit={addNewOption}>
+                    <form key={editingOption?.id ?? activeCategory} className="grid gap-4" onSubmit={submitOption}>
                       <div className="grid gap-3 md:grid-cols-2">
-                        <FieldLabel>Name<Input name="name" required placeholder="e.g. Villa Shanti" /></FieldLabel>
-                        <FieldLabel>Area / location<Input name="location" required placeholder="e.g. White Town" /></FieldLabel>
-                        <FieldLabel>Link<Input name="link" type="url" placeholder="https://..." /></FieldLabel>
-                        <FieldLabel>What it serves / offers<Input name="description" placeholder="Cuisine, rooms, activities..." /></FieldLabel>
-                        <FieldLabel>Famous for<Input name="famousFor" placeholder="Why people go here" /></FieldLabel>
-                        <FieldLabel>Notes<Input name="notes" placeholder="Timing, dress code, booking notes..." /></FieldLabel>
+                        <FieldLabel>Name<Input name="name" required placeholder="e.g. Villa Shanti" defaultValue={editingOption?.name ?? ""} /></FieldLabel>
+                        <FieldLabel>Area / location<Input name="location" required placeholder="e.g. White Town" defaultValue={editingOption?.location ?? ""} /></FieldLabel>
+                        <FieldLabel>Link<Input name="link" type="url" placeholder="https://..." defaultValue={editingOption?.link ?? ""} /></FieldLabel>
+                        <FieldLabel>What it serves / offers<Input name="description" placeholder="Cuisine, rooms, activities..." defaultValue={editingOption?.description ?? ""} /></FieldLabel>
+                        <FieldLabel>Famous for<Input name="famousFor" placeholder="Why people go here" defaultValue={editingOption?.famousFor ?? ""} /></FieldLabel>
+                        <FieldLabel>Notes<Input name="notes" placeholder="Timing, dress code, booking notes..." defaultValue={editingOption?.notes ?? ""} /></FieldLabel>
                         {activeCategory === "stay" ? (
                           <>
-                            <FieldLabel>Total cost<Input name="totalCost" type="number" min="0" placeholder="INR" /></FieldLabel>
-                            <FieldLabel>Per-person cost<Input name="perPersonCost" type="number" min="0" placeholder="INR" /></FieldLabel>
-                            <FieldLabel>Capacity notes<Input name="capacityNotes" placeholder="Beds, rooms, rules" /></FieldLabel>
+                            <FieldLabel>Total cost<Input name="totalCost" type="number" min="0" placeholder="INR" defaultValue={editingOption?.totalCost ?? ""} /></FieldLabel>
+                            <FieldLabel>Per-person cost<Input name="perPersonCost" type="number" min="0" placeholder="INR" defaultValue={editingOption?.perPersonCost ?? ""} /></FieldLabel>
+                            <FieldLabel>Capacity notes<Input name="capacityNotes" placeholder="Beds, rooms, rules" defaultValue={editingOption?.capacityNotes ?? ""} /></FieldLabel>
                           </>
                         ) : null}
                       </div>
-                      <Button type="submit" disabled={busy} className="w-full sm:w-fit">
-                        <Plus size={17} />
-                        Add option
-                      </Button>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button type="submit" disabled={busy} className="w-full sm:w-fit">
+                          {editingOption ? <Save size={17} /> : <Plus size={17} />}
+                          {editingOption ? "Update option" : "Add option"}
+                        </Button>
+                        {editingOption ? (
+                          <Button type="button" variant="outline" onClick={() => setEditingOption(null)}>
+                            Cancel edit
+                          </Button>
+                        ) : null}
+                      </div>
                     </form>
                   </CardContent>
                 </Card>
@@ -532,14 +718,24 @@ export default function PlannerApp() {
                     <EmptyState icon={MapPin} title="No plans added yet" description="Start building your Pondicherry itinerary by adding the first option in this category." />
                   ) : (
                     visibleOptions.map((option) => (
-                      <TripOptionCard key={option.id} option={option} ratings={state.ratings} activeTraveler={activeTraveler} onRate={rate} />
+                      <TripOptionCard
+                        key={option.id}
+                        option={option}
+                        ratings={state.ratings}
+                        activeTraveler={activeTraveler}
+                        busy={busy}
+                        onRate={rate}
+                        onClearRating={clearRating}
+                        onEdit={startEditOption}
+                        onDelete={deleteTripOption}
+                      />
                     ))
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            <section id="itinerary">
+            <section id="itinerary" className="hidden">
               <Card>
                 <CardHeader>
                   <PageHeader eyebrow="Itinerary timeline" title="Day-wise candidate plans" description="Generated from group ratings, must-have categories, attendance, and practical trip flow." />
@@ -565,48 +761,94 @@ export default function PlannerApp() {
             </section>
           </section>
 
-          <section id="bookings" className="grid gap-5 xl:grid-cols-2">
+          <section id="itinerary-page" className={cn(activePage !== "itinerary" && "hidden")}>
+            <Card>
+              <CardHeader>
+                <PageHeader eyebrow="Itinerary timeline" title="Day-wise candidate plans" description="Generated from group ratings, must-have categories, attendance, and practical trip flow." />
+                {state.savedItinerary ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-secondary/10 p-3 text-sm font-bold text-secondary">
+                    <Check size={18} />
+                    Saved: {state.savedItinerary.name}
+                  </div>
+                ) : null}
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                {state.itineraryCandidates.map((candidate) => (
+                  <ItineraryTimeline
+                    key={candidate.id}
+                    candidate={candidate}
+                    canSave={Boolean(activeTravelerRecord?.isOrganizer)}
+                    busy={busy}
+                    onSave={saveCandidate}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          </section>
+
+          <section id="bookings" className={cn("grid gap-5 xl:grid-cols-2", activePage !== "bookings" && "hidden")}>
             <StaySection stayOptions={stayOptions} totalStayBudget={totalStayBudget} />
             <TransportSection />
           </section>
 
-          <section id="expenses" className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+          <section id="expenses" className={cn("grid gap-5", activePage !== "expenses" && "hidden")}>
             <ExpensesSection stayOptions={stayOptions} totalStayBudget={totalStayBudget} />
+          </section>
+
+          <section id="group" className={cn(activePage !== "group" && "hidden")}>
             <GroupMembers travelers={state.travelers} />
           </section>
 
-          <section id="packing" className="grid gap-5 xl:grid-cols-[1fr_0.9fr]" >
+          <section id="packing" className={cn("grid gap-5", activePage !== "packing" && "hidden")} >
             <PackingChecklist checkedPacking={checkedPacking} setCheckedPacking={setCheckedPacking} />
+          </section>
+
+          <section id="notes" className={cn(activePage !== "notes" && "hidden")}>
+            <LocalCrudSection
+              storageKey="pondi-notes"
+              title="Notes"
+              description="Create, edit, complete, and delete food ideas, reminders, and tiny group decisions."
+              icon={NotebookPen}
+              titlePlaceholder="e.g. Try breakfast in White Town"
+              detailPlaceholder="Details, links, timing, or context"
+              metaPlaceholder="Food, place, reminder, memory"
+            />
+          </section>
+
+          <section id="memories" className={cn(activePage !== "memories" && "hidden")}>
             <NotesMemories topOption={topOption} />
           </section>
 
-          <section id="more" className="grid gap-5 md:grid-cols-2">
-            <Card id="notes">
-              <CardHeader>
-                <CardTitle>Notes</CardTitle>
-                <CardDescription>Places to remember, food ideas, and tiny group decisions.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <EmptyState icon={NotebookPen} title="No notes saved yet" description="Use the options list for structured plans. A future notes backend can persist journal entries here." />
-              </CardContent>
-            </Card>
+          <section id="more" className={cn("grid gap-5 md:grid-cols-2", activePage !== "more" && "hidden")}>
             <Card id="memories">
               <CardHeader>
-                <CardTitle>Memories</CardTitle>
-                <CardDescription>Photo slots and favorite moments for after the trip.</CardDescription>
+                <CardTitle>More</CardTitle>
+                <CardDescription>Quick access to the quieter trip pages.</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-3 gap-3">
-                {[1, 2, 3].map((slot) => (
-                  <div key={slot} className="grid aspect-square place-items-center rounded-lg border border-dashed border-border bg-background/70 text-xs font-bold text-mutedText">
-                    Photo {slot}
-                  </div>
+              <CardContent className="grid gap-2 sm:grid-cols-2">
+                {(["bookings", "packing", "notes", "memories", "settings"] as PageId[]).map((page) => (
+                  <Button key={page} type="button" variant="outline" onClick={() => setActivePage(page)}>
+                    {page[0].toUpperCase() + page.slice(1)}
+                  </Button>
                 ))}
+              </CardContent>
+            </Card>
+          </section>
+
+          <section id="settings-page" className={cn(activePage !== "settings" && "hidden")}>
+            <Card>
+              <CardHeader>
+                <PageHeader eyebrow="Settings" title="Trip controls" description="Select the active traveler, refresh group data, and manage local-only section data from each page." />
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                <TripCard label="Active traveler" value={activeTravelerRecord?.name ?? "Select one"} icon={Users} />
+                <TripCard label="Shared database" value="Neon ready" icon={CheckCircle2} />
               </CardContent>
             </Card>
           </section>
         </div>
       </div>
-      <MobileBottomNav />
+      <MobileBottomNav activePage={activePage} setActivePage={setActivePage} />
       {message ? <div className="fixed bottom-24 right-4 z-50 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-white shadow-coastal lg:bottom-5">{message}</div> : null}
     </main>
   );
@@ -616,12 +858,20 @@ function TripOptionCard({
   option,
   ratings,
   activeTraveler,
-  onRate
+  busy,
+  onRate,
+  onClearRating,
+  onEdit,
+  onDelete
 }: {
   option: RankedOption;
   ratings: Rating[];
   activeTraveler: string;
+  busy: boolean;
   onRate: (optionId: string, stars: number) => void;
+  onClearRating: (optionId: string) => void;
+  onEdit: (option: RankedOption) => void;
+  onDelete: (optionId: string) => void;
 }) {
   const Icon = categoryIcons[option.category];
   return (
@@ -652,13 +902,23 @@ function TripOptionCard({
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-          {option.link ? (
-            <Button asChild variant="outline" size="sm">
-              <a href={option.link} target="_blank" rel="noreferrer">Open link</a>
+          <div className="flex flex-wrap gap-2">
+            {option.link ? (
+              <Button asChild variant="outline" size="sm">
+                <a href={option.link} target="_blank" rel="noreferrer">Open link</a>
+              </Button>
+            ) : (
+              <span className="self-center text-xs text-mutedText">No link added</span>
+            )}
+            <Button type="button" variant="outline" size="sm" onClick={() => onEdit(option)}>
+              <Edit2 size={14} />
+              Edit
             </Button>
-          ) : (
-            <span className="text-xs text-mutedText">No link added</span>
-          )}
+            <Button type="button" variant="stamp" size="sm" disabled={busy} onClick={() => onDelete(option.id)}>
+              <Trash2 size={14} />
+              Delete
+            </Button>
+          </div>
           <div className="flex items-center gap-1" aria-label={`Rate ${option.name}`}>
             {[1, 2, 3, 4, 5].map((star) => {
               const selected = ratingFor(ratings, activeTraveler, option.id) >= star;
@@ -673,6 +933,11 @@ function TripOptionCard({
                 </button>
               );
             })}
+            {ratingFor(ratings, activeTraveler, option.id) ? (
+              <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => onClearRating(option.id)}>
+                Clear
+              </Button>
+            ) : null}
           </div>
         </div>
       </CardContent>
@@ -783,11 +1048,12 @@ function StaySection({ stayOptions, totalStayBudget }: { stayOptions: RankedOpti
 
 function TransportSection() {
   return (
-    <Card>
-      <CardHeader>
-        <PageHeader eyebrow="Boarding passes" title="Transport / tickets" description="A ticket-style area for train, bus, cab, flight, and rental-bike plans." />
-      </CardHeader>
-      <CardContent>
+    <div className="grid gap-5">
+      <Card>
+        <CardHeader>
+          <PageHeader eyebrow="Boarding passes" title="Transport / tickets" description="A ticket-style area for train, bus, cab, flight, and rental-bike plans." />
+        </CardHeader>
+        <CardContent>
         <div className="ticket-cut rounded-lg border border-dashed border-border bg-white p-4 shadow-ticket">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -804,8 +1070,19 @@ function TransportSection() {
             <span>PNR: TBD</span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      <LocalCrudSection
+        storageKey="pondi-transport"
+        title="Transport Items"
+        description="Create, edit, complete, and delete train, bus, cab, flight, or rental-bike records."
+        icon={Train}
+        titlePlaceholder="e.g. Chennai to Pondicherry cab"
+        detailPlaceholder="Pickup, driver, passenger, route details"
+        metaPlaceholder="Date/time or PNR"
+        amountPlaceholder="Cost"
+      />
+    </div>
   );
 }
 
@@ -839,7 +1116,16 @@ function ExpensesSection({ stayOptions, totalStayBudget }: { stayOptions: Ranked
             ))}
           </CardContent>
         </Card>
-        <EmptyState icon={CreditCard} title="No settlements yet" description="No expenses beyond stay-option costs are stored in the current backend, so payment splits remain a planning placeholder." />
+        <LocalCrudSection
+          storageKey="pondi-expenses"
+          title="Expenses"
+          description="Create, edit, settle, and delete group expenses while the shared stay budget stays visible above."
+          icon={CreditCard}
+          titlePlaceholder="e.g. Dinner at Coromandel Cafe"
+          detailPlaceholder="Who paid, who shared, settlement notes"
+          metaPlaceholder="Category or payer"
+          amountPlaceholder="Amount"
+        />
       </CardContent>
     </Card>
   );
@@ -847,16 +1133,27 @@ function ExpensesSection({ stayOptions, totalStayBudget }: { stayOptions: Ranked
 
 function GroupMembers({ travelers }: { travelers: Traveler[] }) {
   return (
-    <Card id="group">
-      <CardHeader>
-        <PageHeader eyebrow="Travel crew" title="Group members" description="Friendly member cards with attendance, payment status, and task placeholders." />
-      </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2">
-        {travelers.map((traveler, index) => (
-          <MemberCard key={traveler.id} traveler={traveler} index={index} />
-        ))}
-      </CardContent>
-    </Card>
+    <div className="grid gap-5">
+      <Card id="group">
+        <CardHeader>
+          <PageHeader eyebrow="Travel crew" title="Group members" description="Friendly member cards with attendance, payment status, and task placeholders." />
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {travelers.map((traveler, index) => (
+            <MemberCard key={traveler.id} traveler={traveler} index={index} />
+          ))}
+        </CardContent>
+      </Card>
+      <LocalCrudSection
+        storageKey="pondi-group-tasks"
+        title="Group Tasks"
+        description="Create, edit, complete, and delete assignments without changing the fixed traveler roster."
+        icon={Users}
+        titlePlaceholder="e.g. Carry Bluetooth speaker"
+        detailPlaceholder="Task notes or backup person"
+        metaPlaceholder="Assigned person"
+      />
+    </div>
   );
 }
 
@@ -869,7 +1166,6 @@ function MemberCard({ traveler, index }: { traveler: Traveler; index: number }) 
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-black text-primary">{traveler.name}</h3>
-            {traveler.isOrganizer ? <Badge variant="accent">Organizer</Badge> : <Badge variant="outline">Traveler</Badge>}
           </div>
           <p className="mt-1 text-sm text-mutedText">
             Age {traveler.age} - {traveler.gender} - {traveler.attendance.length}/4 trip days
@@ -893,58 +1189,80 @@ function PackingChecklist({
   setCheckedPacking: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <PageHeader eyebrow="Packing" title="Grouped checklist" description="A mobile-friendly checklist for documents, beach items, electronics, and shared group items." />
-      </CardHeader>
-      <CardContent className="grid gap-4 md:grid-cols-2">
-        {packingGroups.map(([group, items]) => (
-          <div key={group} className="rounded-lg border border-border bg-white p-4">
-            <h3 className="mb-3 font-black text-primary">{group}</h3>
-            <div className="grid gap-3">
-              {items.map((item) => (
-                <label key={item} className="flex items-center gap-3 text-sm">
-                  <Checkbox
-                    checked={Boolean(checkedPacking[item])}
-                    onChange={(event) => setCheckedPacking((current) => ({ ...current, [item]: event.currentTarget.checked }))}
-                  />
-                  <span className={cn("font-medium text-text", checkedPacking[item] && "text-mutedText line-through")}>{item}</span>
-                  <Badge variant="outline" className="ml-auto">Group</Badge>
-                </label>
-              ))}
+    <div className="grid gap-5">
+      <Card>
+        <CardHeader>
+          <PageHeader eyebrow="Packing" title="Grouped checklist" description="A mobile-friendly checklist for documents, beach items, electronics, and shared group items." />
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          {packingGroups.map(([group, items]) => (
+            <div key={group} className="rounded-lg border border-border bg-white p-4">
+              <h3 className="mb-3 font-black text-primary">{group}</h3>
+              <div className="grid gap-3">
+                {items.map((item) => (
+                  <label key={item} className="flex items-center gap-3 text-sm">
+                    <Checkbox
+                      checked={Boolean(checkedPacking[item])}
+                      onChange={(event) => setCheckedPacking((current) => ({ ...current, [item]: event.currentTarget.checked }))}
+                    />
+                    <span className={cn("font-medium text-text", checkedPacking[item] && "text-mutedText line-through")}>{item}</span>
+                    <Badge variant="outline" className="ml-auto">Group</Badge>
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+          ))}
+        </CardContent>
+      </Card>
+      <LocalCrudSection
+        storageKey="pondi-packing"
+        title="Packing Items"
+        description="Create, edit, complete, and delete custom packing tasks."
+        icon={PackageCheck}
+        titlePlaceholder="e.g. Beach mat"
+        detailPlaceholder="Who brings it or where it is packed"
+        metaPlaceholder="Category or assigned person"
+      />
+    </div>
   );
 }
 
 function NotesMemories({ topOption }: { topOption?: RankedOption }) {
   return (
-    <Card>
-      <CardHeader>
-        <PageHeader eyebrow="Journal" title="Notes and memories" description="A soft travel-journal area for recommendations, photo placeholders, and favorite moments." />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-lg border border-border bg-background/65 p-4">
-          <p className="text-sm font-bold text-mutedText">Current group favorite</p>
-          <p className="mt-1 text-xl font-black text-primary">{topOption?.name ?? "No ratings yet"}</p>
-          <p className="mt-1 text-sm text-mutedText">{topOption ? `${topOption.location} - ${topOption.averageRating.toFixed(1)} stars` : "Start rating places to create a favorite moment."}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-dashed border-highlight/45 bg-highlight/10 p-4">
-            <NotebookPen className="mb-3 text-highlight" />
-            <p className="font-black text-primary">Food recommendations</p>
-            <p className="mt-1 text-sm text-mutedText">Add cafes and meals through Food options.</p>
+    <div className="grid gap-5">
+      <Card>
+        <CardHeader>
+          <PageHeader eyebrow="Journal" title="Memories" description="A soft travel-journal area for recommendations, photo placeholders, and favorite moments." />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border bg-background/65 p-4">
+            <p className="text-sm font-bold text-mutedText">Current group favorite</p>
+            <p className="mt-1 text-xl font-black text-primary">{topOption?.name ?? "No ratings yet"}</p>
+            <p className="mt-1 text-sm text-mutedText">{topOption ? `${topOption.location} - ${topOption.averageRating.toFixed(1)} stars` : "Start rating places to create a favorite moment."}</p>
           </div>
-          <div className="rounded-lg border border-dashed border-secondary/45 bg-secondary/10 p-4">
-            <Bike className="mb-3 text-secondary" />
-            <p className="font-black text-primary">Favorite moments</p>
-            <p className="mt-1 text-sm text-mutedText">Ready for post-trip notes.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-dashed border-highlight/45 bg-highlight/10 p-4">
+              <NotebookPen className="mb-3 text-highlight" />
+              <p className="font-black text-primary">Food recommendations</p>
+              <p className="mt-1 text-sm text-mutedText">Add cafes and meals through Food options.</p>
+            </div>
+            <div className="rounded-lg border border-dashed border-secondary/45 bg-secondary/10 p-4">
+              <Bike className="mb-3 text-secondary" />
+              <p className="font-black text-primary">Favorite moments</p>
+              <p className="mt-1 text-sm text-mutedText">Ready for post-trip notes.</p>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      <LocalCrudSection
+        storageKey="pondi-memories"
+        title="Memories"
+        description="Create, edit, complete, and delete favorite moments or photo placeholders."
+        icon={Umbrella}
+        titlePlaceholder="e.g. Sunset at Rock Beach"
+        detailPlaceholder="What happened, who was there, photo note"
+        metaPlaceholder="Moment, photo, food, quote"
+      />
+    </div>
   );
 }

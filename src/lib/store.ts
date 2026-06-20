@@ -191,6 +191,90 @@ export async function addOption(input: Omit<TripOption, "id" | "createdAt">) {
   return option;
 }
 
+export async function updateOption(optionId: string, input: Partial<Omit<TripOption, "id" | "createdAt" | "createdBy">>) {
+  const sql = await ensureDb();
+
+  if (!sql) {
+    const state = await localState();
+    const existing = state.options.find((option) => option.id === optionId);
+    if (!existing) return null;
+    const updated: TripOption = {
+      ...existing,
+      ...input,
+      totalCost: cleanNumber(input.totalCost ?? existing.totalCost),
+      perPersonCost: cleanNumber(input.perPersonCost ?? existing.perPersonCost)
+    };
+    state.options = state.options.map((option) => (option.id === optionId ? updated : option));
+    await writeLocalState(state);
+    return updated;
+  }
+
+  const current = await sql`select * from options where id = ${optionId}`;
+  if (current.length === 0) return null;
+  const row = current[0];
+  const updated = {
+    category: input.category ?? row.category,
+    name: input.name ?? row.name,
+    location: input.location ?? row.location,
+    link: input.link ?? row.link,
+    description: input.description ?? row.description,
+    famousFor: input.famousFor ?? row.famous_for,
+    notes: input.notes ?? row.notes,
+    totalCost: cleanNumber(input.totalCost ?? (row.total_cost === null ? null : Number(row.total_cost))),
+    perPersonCost: cleanNumber(input.perPersonCost ?? (row.per_person_cost === null ? null : Number(row.per_person_cost))),
+    capacityNotes: input.capacityNotes ?? row.capacity_notes
+  };
+
+  const rows = await sql`
+    update options set
+      category = ${updated.category},
+      name = ${updated.name},
+      location = ${updated.location},
+      link = ${updated.link},
+      description = ${updated.description},
+      famous_for = ${updated.famousFor},
+      notes = ${updated.notes},
+      total_cost = ${updated.totalCost},
+      per_person_cost = ${updated.perPersonCost},
+      capacity_notes = ${updated.capacityNotes}
+    where id = ${optionId}
+    returning *
+  `;
+
+  const saved = rows[0];
+  return {
+    id: String(saved.id),
+    category: saved.category,
+    name: String(saved.name),
+    location: String(saved.location),
+    link: String(saved.link),
+    description: String(saved.description),
+    famousFor: String(saved.famous_for),
+    notes: String(saved.notes),
+    totalCost: saved.total_cost === null ? null : Number(saved.total_cost),
+    perPersonCost: saved.per_person_cost === null ? null : Number(saved.per_person_cost),
+    capacityNotes: String(saved.capacity_notes),
+    createdBy: String(saved.created_by),
+    createdAt: String(saved.created_at)
+  } as TripOption;
+}
+
+export async function deleteOption(optionId: string) {
+  const sql = await ensureDb();
+
+  if (!sql) {
+    const state = await localState();
+    const before = state.options.length;
+    state.options = state.options.filter((option) => option.id !== optionId);
+    state.ratings = state.ratings.filter((rating) => rating.optionId !== optionId);
+    await writeLocalState(state);
+    return state.options.length < before;
+  }
+
+  const rows = await sql`delete from options where id = ${optionId} returning id`;
+  return rows.length > 0;
+}
+
 export async function upsertRating(input: Omit<Rating, "id">) {
   const rating: Rating = { ...input, id: id("rating") };
   const sql = await ensureDb();
@@ -210,6 +294,21 @@ export async function upsertRating(input: Omit<Rating, "id">) {
     do update set stars = excluded.stars, comment = excluded.comment
   `;
   return rating;
+}
+
+export async function deleteRating(optionId: string, travelerId: string) {
+  const sql = await ensureDb();
+
+  if (!sql) {
+    const state = await localState();
+    const before = state.ratings.length;
+    state.ratings = state.ratings.filter((rating) => !(rating.optionId === optionId && rating.travelerId === travelerId));
+    await writeLocalState(state);
+    return state.ratings.length < before;
+  }
+
+  const rows = await sql`delete from ratings where option_id = ${optionId} and traveler_id = ${travelerId} returning id`;
+  return rows.length > 0;
 }
 
 export async function saveItinerary(itinerary: ItineraryCandidate) {

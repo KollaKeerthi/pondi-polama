@@ -31,7 +31,7 @@ export function createSeedTravelers(): Traveler[] {
       name: traveler.name,
       age: traveler.age,
       gender: traveler.gender,
-      isOrganizer: index === 0,
+      isOrganizer: traveler.name === "Keerthi" || traveler.name === "Mohana Kota",
       attendance
     };
   });

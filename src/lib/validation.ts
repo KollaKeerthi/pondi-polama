@@ -21,6 +21,8 @@ export const optionSchema = z.object({
   createdBy: z.string().min(1)
 });
 
+export const optionUpdateSchema = optionSchema.omit({ createdBy: true }).partial();
+
 export const ratingSchema = z.object({
   optionId: z.string().min(1),
   travelerId: z.string().min(1),
