@@ -23,8 +23,7 @@ function syncSeedTravelers(state: TripState): TripState {
 
 function syncSeedOptions(state: TripState): TripState {
   const seedOptions = createSeedOptions();
-  const seedIds = new Set(seedOptions.map((option) => option.id));
-  const userOptions = state.options.filter((option) => !seedIds.has(option.id));
+  const userOptions = state.options.filter((option) => !option.id.startsWith("seed-"));
 
   return {
     ...state,
@@ -146,6 +145,8 @@ async function ensureDb() {
         capacity_notes = excluded.capacity_notes
     `;
   }
+
+  await sql`delete from options where id like 'seed-nightlife-%'`;
 
   return sql;
 }

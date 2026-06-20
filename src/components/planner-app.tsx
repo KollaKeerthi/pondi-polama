@@ -57,8 +57,8 @@ const categoryLabels: Record<Category, string> = {
   food: "Food",
   shopping: "Shopping",
   temples: "Temples",
-  beaches: "Beaches",
-  nightlife: "Nightlife"
+  beaches: "Beaches & Sightseeing",
+  nightlife: "Night Clubs"
 };
 
 const categoryHints: Record<Category, string> = {
@@ -66,8 +66,8 @@ const categoryHints: Record<Category, string> = {
   food: "French cafes, Tamil meals, bakeries, seafood",
   shopping: "Markets, boutiques, crafts, souvenirs",
   temples: "Culture, calm mornings, history",
-  beaches: "Promenade walks, sunrise, sunset, water",
-  nightlife: "Dance pubs, bars, late-night scenes"
+  beaches: "Beaches, promenade walks, sunrise, boating, heritage stops",
+  nightlife: "Night clubs and dance-floor options only"
 };
 
 const categoryIcons: Record<Category, React.ElementType> = {

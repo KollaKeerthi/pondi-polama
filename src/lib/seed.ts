@@ -104,16 +104,7 @@ const seedOptionGroups: Array<{
   },
   {
     category: "nightlife",
-    items: [
-      { name: "The Spot", type: "Sunset view / evening hangout", bestTime: "Sunset to night", notes: "Keep note: bad service, but great vibe and view" },
-      { name: "Villa Shanti", type: "Dinner / cafe-bar", bestTime: "Dinner, 7 PM onwards", notes: "Good polished evening option" },
-      { name: "Chez Francis", type: "Dinner / heritage evening meal", bestTime: "Dinner", notes: "Good for a slower French-town evening" },
-      { name: "Coromandel Cafe", type: "Pretty cafe dinner", bestTime: "Early dinner", notes: "Good if the group wants aesthetic dinner" },
-      { name: "GMT Gelato", type: "Dessert stop", bestTime: "After dinner", notes: "Good night dessert walk plan" },
-      { name: "Rock Beach / Promenade", type: "Night walk", bestTime: "7 PM-10 PM", notes: "Good post-dinner walk" },
-      { name: "Pondy Marina", type: "Casual night outing", bestTime: "Evening/night", notes: "More local, casual group vibe" },
-      { name: "French Colony / White Town", type: "Evening walk", bestTime: "5 PM-8 PM", notes: "Best for photos, streets, cafes, and relaxed walking" }
-    ]
+    items: []
   }
 ];
 
