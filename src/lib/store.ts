@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { promises as fs } from "fs";
 import path from "path";
-import { createInitialState } from "./seed";
+import { createInitialState, createSeedOptions } from "./seed";
 import { ItineraryCandidate, Rating, Traveler, TripOption, TripState } from "./types";
 
 const dataPath = path.join(process.cwd(), "trip-data.json");
@@ -21,9 +21,20 @@ function syncSeedTravelers(state: TripState): TripState {
   };
 }
 
+function syncSeedOptions(state: TripState): TripState {
+  const seedOptions = createSeedOptions();
+  const seedIds = new Set(seedOptions.map((option) => option.id));
+  const userOptions = state.options.filter((option) => !seedIds.has(option.id));
+
+  return {
+    ...state,
+    options: [...seedOptions, ...userOptions]
+  };
+}
+
 async function localState(): Promise<TripState> {
   try {
-    const state = syncSeedTravelers(JSON.parse(await fs.readFile(dataPath, "utf8")) as TripState);
+    const state = syncSeedOptions(syncSeedTravelers(JSON.parse(await fs.readFile(dataPath, "utf8")) as TripState));
     await fs.writeFile(dataPath, JSON.stringify(state, null, 2));
     return state;
   } catch {
@@ -108,6 +119,31 @@ async function ensureDb() {
         gender = excluded.gender,
         is_organizer = excluded.is_organizer,
         attendance = excluded.attendance
+    `;
+  }
+
+  for (const option of createSeedOptions()) {
+    await sql`
+      insert into options (
+        id, category, name, location, link, description, famous_for, notes,
+        total_cost, per_person_cost, capacity_notes, created_by, created_at
+      )
+      values (
+        ${option.id}, ${option.category}, ${option.name}, ${option.location}, ${option.link},
+        ${option.description}, ${option.famousFor}, ${option.notes}, ${option.totalCost},
+        ${option.perPersonCost}, ${option.capacityNotes}, ${option.createdBy}, ${option.createdAt}
+      )
+      on conflict (id) do update set
+        category = excluded.category,
+        name = excluded.name,
+        location = excluded.location,
+        link = excluded.link,
+        description = excluded.description,
+        famous_for = excluded.famous_for,
+        notes = excluded.notes,
+        total_cost = excluded.total_cost,
+        per_person_cost = excluded.per_person_cost,
+        capacity_notes = excluded.capacity_notes
     `;
   }
 
