@@ -14,9 +14,18 @@ function cleanNumber(value: number | null | undefined) {
   return value === undefined || Number.isNaN(value) ? null : value;
 }
 
+function syncSeedTravelers(state: TripState): TripState {
+  return {
+    ...state,
+    travelers: createInitialState().travelers
+  };
+}
+
 async function localState(): Promise<TripState> {
   try {
-    return JSON.parse(await fs.readFile(dataPath, "utf8")) as TripState;
+    const state = syncSeedTravelers(JSON.parse(await fs.readFile(dataPath, "utf8")) as TripState);
+    await fs.writeFile(dataPath, JSON.stringify(state, null, 2));
+    return state;
   } catch {
     const initial = createInitialState();
     await fs.writeFile(dataPath, JSON.stringify(initial, null, 2));
@@ -40,10 +49,14 @@ async function ensureDb() {
     create table if not exists travelers (
       id text primary key,
       name text not null,
+      age integer not null default 0,
+      gender text not null default '',
       is_organizer boolean not null default false,
       attendance jsonb not null
     )
   `;
+  await sql`alter table travelers add column if not exists age integer not null default 0`;
+  await sql`alter table travelers add column if not exists gender text not null default ''`;
   await sql`
     create table if not exists options (
       id text primary key,
@@ -78,14 +91,24 @@ async function ensureDb() {
     )
   `;
 
-  const count = await sql`select count(*)::int as count from travelers`;
-  if (Number(count[0].count) === 0) {
-    for (const traveler of createInitialState().travelers) {
-      await sql`
-        insert into travelers (id, name, is_organizer, attendance)
-        values (${traveler.id}, ${traveler.name}, ${traveler.isOrganizer}, ${JSON.stringify(traveler.attendance)}::jsonb)
-      `;
-    }
+  for (const traveler of createInitialState().travelers) {
+    await sql`
+      insert into travelers (id, name, age, gender, is_organizer, attendance)
+      values (
+        ${traveler.id},
+        ${traveler.name},
+        ${traveler.age},
+        ${traveler.gender},
+        ${traveler.isOrganizer},
+        ${JSON.stringify(traveler.attendance)}::jsonb
+      )
+      on conflict (id) do update set
+        name = excluded.name,
+        age = excluded.age,
+        gender = excluded.gender,
+        is_organizer = excluded.is_organizer,
+        attendance = excluded.attendance
+    `;
   }
 
   return sql;
@@ -96,7 +119,7 @@ export async function getState(): Promise<TripState> {
   if (!sql) return localState();
 
   const [travelers, options, ratings, saved] = await Promise.all([
-    sql`select id, name, is_organizer, attendance from travelers order by id`,
+    sql`select id, name, age, gender, is_organizer, attendance from travelers order by id`,
     sql`select * from options order by created_at desc`,
     sql`select id, option_id, traveler_id, stars, comment from ratings`,
     sql`select itinerary from saved_itinerary where id = 1`
@@ -106,6 +129,8 @@ export async function getState(): Promise<TripState> {
     travelers: travelers.map((row) => ({
       id: String(row.id),
       name: String(row.name),
+      age: Number(row.age),
+      gender: row.gender === "Male" ? "Male" : "Female",
       isOrganizer: Boolean(row.is_organizer),
       attendance: row.attendance
     })) as Traveler[],

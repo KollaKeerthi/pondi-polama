@@ -871,7 +871,9 @@ function MemberCard({ traveler, index }: { traveler: Traveler; index: number }) 
             <h3 className="font-black text-primary">{traveler.name}</h3>
             {traveler.isOrganizer ? <Badge variant="accent">Organizer</Badge> : <Badge variant="outline">Traveler</Badge>}
           </div>
-          <p className="mt-1 text-sm text-mutedText">{traveler.attendance.length}/4 trip days</p>
+          <p className="mt-1 text-sm text-mutedText">
+            Age {traveler.age} - {traveler.gender} - {traveler.attendance.length}/4 trip days
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <StatusBadge status={index % 3 === 0 ? "Pending" : "TBD"} />
             <Badge variant="secondary">Tasks TBD</Badge>

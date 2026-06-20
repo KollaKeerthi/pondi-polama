@@ -8,6 +8,8 @@ export type Category = (typeof categories)[number];
 export type Traveler = {
   id: string;
   name: string;
+  age: number;
+  gender: "Female" | "Male";
   isOrganizer: boolean;
   attendance: TripDate[];
 };
