@@ -22,7 +22,7 @@ export function createSeedTravelers(): Traveler[] {
   return travelerDetails.map((traveler, index) => {
     const attendance = tripDates.filter((date) => {
       if (date === "2026-08-01" && index >= 12) return false;
-      if (date === "2026-08-04" && (index === 0 || index === 1)) return false;
+      if (date === "2026-08-04" && (traveler.name === "Sadana" || traveler.name === "Anirudh")) return false;
       return true;
     });
 
