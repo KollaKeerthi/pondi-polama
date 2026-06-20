@@ -41,6 +41,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { createSeedTravelers } from "@/lib/seed";
 import { categories, Category, ItineraryCandidate, RankedOption, Rating, Traveler, TripOption, tripDates } from "@/lib/types";
 
 type StateResponse = {
@@ -456,6 +457,7 @@ function LocalCrudSection({
 
 export default function PlannerApp() {
   const [enteredCode, setEnteredCode] = useState("");
+  const [loginTraveler, setLoginTraveler] = useState("traveler-3");
   const [unlocked, setUnlocked] = useState(false);
   const [state, setState] = useState<StateResponse | null>(null);
   const [activeTraveler, setActiveTraveler] = useState("");
@@ -487,20 +489,17 @@ export default function PlannerApp() {
     loadState();
   }, [unlocked]);
 
-  useEffect(() => {
-    if (!state || activeTraveler) return;
-    setActiveTraveler(state.travelers[0]?.id ?? "");
-  }, [state, activeTraveler]);
-
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const response = await fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ passcode: enteredCode.trim() })
+      body: JSON.stringify({ passcode: enteredCode.trim(), travelerId: loginTraveler })
     });
 
     if (response.ok) {
+      setActiveTraveler(loginTraveler);
+      window.localStorage.setItem("pondi-active-traveler", loginTraveler);
       setUnlocked(true);
       setMessage("");
     } else {
@@ -592,6 +591,22 @@ export default function PlannerApp() {
     await loadState();
   }
 
+  async function updatePlacePhotos(option: RankedOption, photoUrls: string[]) {
+    if (!activeTravelerRecord?.isOrganizer) return;
+    setBusy(true);
+    const response = await fetch(`/api/options/${option.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        coverImageUrl: photoUrls[0] ?? "",
+        photoUrls
+      })
+    });
+    setBusy(false);
+    setMessage(response.ok ? "Photos updated." : "Could not update photos.");
+    await loadState();
+  }
+
   async function saveCandidate(itineraryId: string) {
     setBusy(true);
     await fetch("/api/itinerary/save", {
@@ -616,7 +631,17 @@ export default function PlannerApp() {
           <CardContent className="p-6">
             <form onSubmit={unlock} className="grid gap-4">
               <FieldLabel>
-                Trip passcode
+                Your name
+                <Select value={loginTraveler} onChange={(event) => setLoginTraveler(event.target.value)}>
+                  {createSeedTravelers().map((traveler) => (
+                    <option key={traveler.id} value={traveler.id}>
+                      {traveler.name}
+                    </option>
+                  ))}
+                </Select>
+              </FieldLabel>
+              <FieldLabel>
+                Shared passcode
                 <div className="flex gap-2">
                   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border bg-muted/45 text-primary">
                     <Lock size={17} />
@@ -662,16 +687,10 @@ export default function PlannerApp() {
               <p className="mt-2 text-sm text-mutedText">Pick your name, rate options, and let the group plan settle itself.</p>
             </div>
             <div className="grid gap-2 sm:grid-cols-[minmax(220px,1fr)_auto]">
-              <FieldLabel>
-                Traveler
-                <Select value={activeTraveler} onChange={(event) => setActiveTraveler(event.target.value)}>
-                  {state.travelers.map((traveler) => (
-                    <option key={traveler.id} value={traveler.id}>
-                      {traveler.name}
-                    </option>
-                  ))}
-                </Select>
-              </FieldLabel>
+              <div className="rounded-lg border border-border bg-white px-3 py-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-mutedText">Signed in as</p>
+                <p className="text-sm font-black text-primary">{activeTravelerRecord?.name ?? "Traveler"}</p>
+              </div>
               <Button type="button" variant="outline" size="icon" onClick={loadState} aria-label="Refresh planner">
                 <RefreshCw size={18} />
               </Button>
@@ -735,6 +754,8 @@ export default function PlannerApp() {
                         onClearRating={clearRating}
                         onEdit={startEditOption}
                         onDelete={deleteTripOption}
+                        canManagePhotos={Boolean(activeTravelerRecord?.isOrganizer)}
+                        onUpdatePhotos={updatePlacePhotos}
                       />
                     ))
                   )}
@@ -918,7 +939,9 @@ function TripOptionCard({
   onRate,
   onClearRating,
   onEdit,
-  onDelete
+  onDelete,
+  canManagePhotos,
+  onUpdatePhotos
 }: {
   option: RankedOption;
   ratings: Rating[];
@@ -928,26 +951,19 @@ function TripOptionCard({
   onClearRating: (optionId: string) => void;
   onEdit: (option: RankedOption) => void;
   onDelete: (optionId: string) => void;
+  canManagePhotos: boolean;
+  onUpdatePhotos: (option: RankedOption, photoUrls: string[]) => void;
 }) {
   const Icon = categoryIcons[option.category];
   const constraints = constraintsFor(option);
   const priority = priorityFor(option);
   const [photosOpen, setPhotosOpen] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(`pondi-place-photos-${option.id}`);
-    if (stored) setPhotos(JSON.parse(stored) as string[]);
-  }, [option.id]);
-
-  useEffect(() => {
-    window.localStorage.setItem(`pondi-place-photos-${option.id}`, JSON.stringify(photos));
-  }, [option.id, photos]);
+  const photos = option.photoUrls ?? [];
 
   function addPhoto() {
-    if (!photoUrl.trim()) return;
-    setPhotos((current) => [photoUrl.trim(), ...current]);
+    if (!photoUrl.trim() || !canManagePhotos) return;
+    onUpdatePhotos(option, [photoUrl.trim(), ...photos]);
     setPhotoUrl("");
     setPhotosOpen(true);
   }
@@ -996,7 +1012,7 @@ function TripOptionCard({
               <a href={mapUrlFor(option)} target="_blank" rel="noreferrer">Open Map</a>
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => setPhotosOpen((open) => !open)}>
-              {photos.length ? "View Photos" : "Add Photos"}
+              {photos.length ? "View Photos" : canManagePhotos ? "Add Photos" : "Photos"}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => onEdit(option)}>
               <Edit2 size={14} />
@@ -1030,23 +1046,29 @@ function TripOptionCard({
         </div>
         {photosOpen ? (
           <div className="mt-4 rounded-lg border border-dashed border-border bg-background/65 p-4">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input value={photoUrl} onChange={(event) => setPhotoUrl(event.target.value)} placeholder="Paste image URL for this place" />
-              <Button type="button" onClick={addPhoto}>Add Photo</Button>
-            </div>
+            {canManagePhotos ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input value={photoUrl} onChange={(event) => setPhotoUrl(event.target.value)} placeholder="Paste image URL for this place" />
+                <Button type="button" onClick={addPhoto}>Add Photo</Button>
+              </div>
+            ) : null}
             {photos.length ? (
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {photos.map((photo) => (
                   <div key={photo} className="overflow-hidden rounded-lg border border-border bg-white">
                     <img src={photo} alt={`${option.name} memory`} className="h-28 w-full object-cover" />
-                    <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setPhotos((current) => current.filter((item) => item !== photo))}>
-                      Remove
-                    </Button>
+                    {canManagePhotos ? (
+                      <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onUpdatePhotos(option, photos.filter((item) => item !== photo))}>
+                        Remove
+                      </Button>
+                    ) : null}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-sm text-mutedText">No photos yet. Add your first memory from this place.</p>
+              <p className="mt-3 text-sm text-mutedText">
+                {canManagePhotos ? "No photos yet. Add your first memory from this place." : "No photos yet. Organizers will add pictures for this place."}
+              </p>
             )}
           </div>
         ) : null}

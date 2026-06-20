@@ -80,10 +80,14 @@ async function ensureDb() {
       total_cost numeric,
       per_person_cost numeric,
       capacity_notes text not null default '',
+      cover_image_url text not null default '',
+      photo_urls jsonb not null default '[]'::jsonb,
       created_by text not null,
       created_at text not null
     )
   `;
+  await sql`alter table options add column if not exists cover_image_url text not null default ''`;
+  await sql`alter table options add column if not exists photo_urls jsonb not null default '[]'::jsonb`;
   await sql`
     create table if not exists ratings (
       id text primary key,
@@ -125,12 +129,13 @@ async function ensureDb() {
     await sql`
       insert into options (
         id, category, name, location, link, description, famous_for, notes,
-        total_cost, per_person_cost, capacity_notes, created_by, created_at
+        total_cost, per_person_cost, capacity_notes, cover_image_url, photo_urls, created_by, created_at
       )
       values (
         ${option.id}, ${option.category}, ${option.name}, ${option.location}, ${option.link},
         ${option.description}, ${option.famousFor}, ${option.notes}, ${option.totalCost},
-        ${option.perPersonCost}, ${option.capacityNotes}, ${option.createdBy}, ${option.createdAt}
+        ${option.perPersonCost}, ${option.capacityNotes}, ${option.coverImageUrl}, ${JSON.stringify(option.photoUrls)}::jsonb,
+        ${option.createdBy}, ${option.createdAt}
       )
       on conflict (id) do update set
         category = excluded.category,
@@ -142,11 +147,25 @@ async function ensureDb() {
         notes = excluded.notes,
         total_cost = excluded.total_cost,
         per_person_cost = excluded.per_person_cost,
-        capacity_notes = excluded.capacity_notes
+        capacity_notes = excluded.capacity_notes,
+        cover_image_url = case when options.cover_image_url = '' then excluded.cover_image_url else options.cover_image_url end,
+        photo_urls = case when options.photo_urls = '[]'::jsonb then excluded.photo_urls else options.photo_urls end
     `;
   }
 
-  await sql`delete from options where id like 'seed-nightlife-%'`;
+  await sql`
+    delete from options
+    where id in (
+      'seed-nightlife-the-spot',
+      'seed-nightlife-villa-shanti',
+      'seed-nightlife-chez-francis',
+      'seed-nightlife-coromandel-cafe',
+      'seed-nightlife-gmt-gelato',
+      'seed-nightlife-rock-beach-promenade',
+      'seed-nightlife-pondy-marina',
+      'seed-nightlife-french-colony-white-town'
+    )
+  `;
 
   return sql;
 }
@@ -183,6 +202,8 @@ export async function getState(): Promise<TripState> {
       totalCost: row.total_cost === null ? null : Number(row.total_cost),
       perPersonCost: row.per_person_cost === null ? null : Number(row.per_person_cost),
       capacityNotes: String(row.capacity_notes),
+      coverImageUrl: String(row.cover_image_url ?? ""),
+      photoUrls: Array.isArray(row.photo_urls) ? row.photo_urls : [],
       createdBy: String(row.created_by),
       createdAt: String(row.created_at)
     })) as TripOption[],
@@ -203,6 +224,8 @@ export async function addOption(input: Omit<TripOption, "id" | "createdAt">) {
     id: id("option"),
     totalCost: cleanNumber(input.totalCost),
     perPersonCost: cleanNumber(input.perPersonCost),
+    coverImageUrl: input.coverImageUrl ?? "",
+    photoUrls: input.photoUrls ?? [],
     createdAt: new Date().toISOString()
   };
   const sql = await ensureDb();
@@ -217,12 +240,13 @@ export async function addOption(input: Omit<TripOption, "id" | "createdAt">) {
   await sql`
     insert into options (
       id, category, name, location, link, description, famous_for, notes,
-      total_cost, per_person_cost, capacity_notes, created_by, created_at
+      total_cost, per_person_cost, capacity_notes, cover_image_url, photo_urls, created_by, created_at
     )
     values (
       ${option.id}, ${option.category}, ${option.name}, ${option.location}, ${option.link},
       ${option.description}, ${option.famousFor}, ${option.notes}, ${option.totalCost},
-      ${option.perPersonCost}, ${option.capacityNotes}, ${option.createdBy}, ${option.createdAt}
+      ${option.perPersonCost}, ${option.capacityNotes}, ${option.coverImageUrl}, ${JSON.stringify(option.photoUrls)}::jsonb,
+      ${option.createdBy}, ${option.createdAt}
     )
   `;
   return option;
@@ -238,8 +262,10 @@ export async function updateOption(optionId: string, input: Partial<Omit<TripOpt
     const updated: TripOption = {
       ...existing,
       ...input,
-      totalCost: cleanNumber(input.totalCost ?? existing.totalCost),
-      perPersonCost: cleanNumber(input.perPersonCost ?? existing.perPersonCost)
+    totalCost: cleanNumber(input.totalCost ?? existing.totalCost),
+      perPersonCost: cleanNumber(input.perPersonCost ?? existing.perPersonCost),
+      coverImageUrl: input.coverImageUrl ?? existing.coverImageUrl,
+      photoUrls: input.photoUrls ?? existing.photoUrls
     };
     state.options = state.options.map((option) => (option.id === optionId ? updated : option));
     await writeLocalState(state);
@@ -259,7 +285,9 @@ export async function updateOption(optionId: string, input: Partial<Omit<TripOpt
     notes: input.notes ?? row.notes,
     totalCost: cleanNumber(input.totalCost ?? (row.total_cost === null ? null : Number(row.total_cost))),
     perPersonCost: cleanNumber(input.perPersonCost ?? (row.per_person_cost === null ? null : Number(row.per_person_cost))),
-    capacityNotes: input.capacityNotes ?? row.capacity_notes
+    capacityNotes: input.capacityNotes ?? row.capacity_notes,
+    coverImageUrl: input.coverImageUrl ?? row.cover_image_url,
+    photoUrls: input.photoUrls ?? row.photo_urls
   };
 
   const rows = await sql`
@@ -273,7 +301,9 @@ export async function updateOption(optionId: string, input: Partial<Omit<TripOpt
       notes = ${updated.notes},
       total_cost = ${updated.totalCost},
       per_person_cost = ${updated.perPersonCost},
-      capacity_notes = ${updated.capacityNotes}
+      capacity_notes = ${updated.capacityNotes},
+      cover_image_url = ${updated.coverImageUrl},
+      photo_urls = ${JSON.stringify(updated.photoUrls)}::jsonb
     where id = ${optionId}
     returning *
   `;
@@ -291,6 +321,8 @@ export async function updateOption(optionId: string, input: Partial<Omit<TripOpt
     totalCost: saved.total_cost === null ? null : Number(saved.total_cost),
     perPersonCost: saved.per_person_cost === null ? null : Number(saved.per_person_cost),
     capacityNotes: String(saved.capacity_notes),
+    coverImageUrl: String(saved.cover_image_url ?? ""),
+    photoUrls: Array.isArray(saved.photo_urls) ? saved.photo_urls : [],
     createdBy: String(saved.created_by),
     createdAt: String(saved.created_at)
   } as TripOption;

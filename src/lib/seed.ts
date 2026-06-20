@@ -104,7 +104,20 @@ const seedOptionGroups: Array<{
   },
   {
     category: "nightlife",
-    items: []
+    items: [
+      {
+        name: "Catamaran Brewing Company",
+        type: "Craft brewery / bar / restaurant",
+        bestTime: "8 PM-11 PM, or weekday happy hours if available",
+        notes: "Great for craft beer, group nightlife, and a lively Pondy evening. Try craft beer tasting, prawns pollichathu, nethili fry, bar snacks, pizza/pasta/seafood. Reserve on weekends; can get crowded; parking may be limited; verify happy hours before going; mixed food/service reviews on some days."
+      },
+      {
+        name: "Mel Whisks",
+        type: "Rooftop gastro bar / restaurant",
+        bestTime: "7 PM-10:30 PM, especially Friday or weekend nights",
+        notes: "Rooftop gastro bar in Heritage Town, good for cocktails, live music, karaoke nights, and a relaxed Pondy evening with friends. Try cocktails, pizza, crispy corn, bar snacks. Verify hours before visiting; reserve on weekends; service reviews are mixed; Friday karaoke may need confirmation."
+      }
+    ]
   }
 ];
 
@@ -126,6 +139,8 @@ export function createSeedOptions(): TripOption[] {
       totalCost: null,
       perPersonCost: null,
       capacityNotes: "",
+      coverImageUrl: "",
+      photoUrls: [],
       createdBy: "traveler-3",
       createdAt: "2026-06-20T00:00:00.000Z"
     }))

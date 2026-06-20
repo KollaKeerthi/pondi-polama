@@ -18,6 +18,8 @@ export const optionSchema = z.object({
   totalCost: z.coerce.number().nonnegative().nullable().optional(),
   perPersonCost: z.coerce.number().nonnegative().nullable().optional(),
   capacityNotes: z.string().max(300).default(""),
+  coverImageUrl: z.string().url().or(z.literal("")).default(""),
+  photoUrls: z.array(z.string().url()).default([]),
   createdBy: z.string().min(1)
 });
 

@@ -26,6 +26,8 @@ export type TripOption = {
   totalCost: number | null;
   perPersonCost: number | null;
   capacityNotes: string;
+  coverImageUrl: string;
+  photoUrls: string[];
   createdBy: string;
   createdAt: string;
 };
