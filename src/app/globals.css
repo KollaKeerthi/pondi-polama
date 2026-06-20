@@ -17,11 +17,8 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  color: #1f2933;
-  background:
-    radial-gradient(circle at 12% 12%, rgba(199, 91, 122, 0.18), transparent 26rem),
-    radial-gradient(circle at 86% 8%, rgba(47, 111, 115, 0.18), transparent 24rem),
-    linear-gradient(180deg, #faf3e7 0%, #f8efe1 48%, #fffaf2 100%);
+  color: #0f3331;
+  background: linear-gradient(180deg, #fbf8f1 0%, #fffdf8 52%, #fbf8f1 100%);
   font-family: Arial, Helvetica, sans-serif;
 }
 

@@ -31,6 +31,7 @@ import {
   Users,
   Waves
 } from "lucide-react";
+import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,15 +82,15 @@ const categoryIcons: Record<Category, React.ElementType> = {
 };
 
 const desktopNav = [
-  ["Dashboard", "dashboard", Map],
-  ["Plan", "plan", Navigation],
+  ["Overview", "dashboard", Map],
+  ["Places", "plan", Navigation],
   ["Itinerary", "itinerary", CalendarDays],
-  ["Bookings", "bookings", Ticket],
   ["Expenses", "expenses", CreditCard],
   ["Group", "group", Users],
+  ["Memories", "memories", Umbrella],
+  ["Bookings", "bookings", Ticket],
   ["Packing", "packing", PackageCheck],
   ["Notes", "notes", NotebookPen],
-  ["Memories", "memories", Umbrella],
   ["Settings", "settings", Settings]
 ] as const;
 
@@ -192,36 +193,61 @@ function PageHeader({ eyebrow, title, description }: { eyebrow: string; title: s
   );
 }
 
-function DesktopSidebar({ activePage, setActivePage }: { activePage: PageId; setActivePage: (page: PageId) => void }) {
+function HeaderNav({
+  activePage,
+  setActivePage,
+  travelers,
+  onAdd,
+  activeTraveler
+}: {
+  activePage: PageId;
+  setActivePage: (page: PageId) => void;
+  travelers: Traveler[];
+  onAdd: () => void;
+  activeTraveler?: Traveler;
+}) {
   return (
-    <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-64 shrink-0 flex-col rounded-lg border border-border bg-white/82 p-4 shadow-coastal backdrop-blur lg:flex">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="grid h-11 w-11 place-items-center rounded-lg bg-primary text-sm font-black text-white">PP</div>
-        <div>
-          <p className="text-sm font-black text-primary">Pondi Polama</p>
-          <p className="text-xs text-mutedText">Private trip passport</p>
-        </div>
+    <header className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-4 py-6 sm:px-8 lg:px-12">
+      <div className="flex min-w-fit items-center gap-4">
+        <button type="button" onClick={() => setActivePage("dashboard")} className="font-serif text-2xl font-semibold text-[#0F3331]">
+          Pondicherry
+        </button>
+        <DecorativeStamp small />
+        <DecorativeWaves />
       </div>
-      <nav className="grid gap-1">
-        {desktopNav.map(([label, href, Icon]) => (
+      <nav className="hidden items-center gap-9 lg:flex">
+        {desktopNav.slice(0, 6).map(([label, href]) => (
           <button
             key={href}
             type="button"
             onClick={() => setActivePage(href)}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-primary hover:bg-muted/55",
-              activePage === href && "bg-muted/70 text-secondary"
+              "relative text-sm font-medium text-[#0F3331]/75 transition hover:text-[#0F3331]",
+              activePage === href && "text-[#0F3331]"
             )}
           >
-            <Icon size={17} />
             {label}
+            {activePage === href ? <span className="absolute -bottom-4 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[#E3A91A]" /> : null}
           </button>
         ))}
       </nav>
-      <div className="mt-auto rounded-lg border border-dashed border-highlight/50 bg-highlight/10 p-3 text-xs leading-5 text-primary">
-        French Town, Promenade, cafes, villas, and one very democratic star-rating system.
+      <div className="flex items-center gap-3">
+        <Button type="button" onClick={onAdd} className="hidden rounded-full bg-[#E3A91A] px-6 text-white hover:bg-[#cf9917] sm:inline-flex">
+          <Plus size={16} />
+          Add
+        </Button>
+        <div className="hidden -space-x-3 sm:flex">
+          {travelers.slice(0, 4).map((traveler) => (
+            <div key={traveler.id} className="grid h-10 w-10 place-items-center rounded-full border-2 border-[#FBF8F1] bg-[#B9D7EA] text-xs font-black text-[#0F3331]">
+              {traveler.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}
+            </div>
+          ))}
+        </div>
+        <div className="grid h-10 w-10 place-items-center rounded-full bg-[#E86F91]/15 text-xs font-black text-[#E86F91]">
+          {activeTraveler?.name.split(" ").map((part) => part[0]).join("").slice(0, 2) ?? "PP"}
+        </div>
       </div>
-    </aside>
+    </header>
   );
 }
 
@@ -246,67 +272,77 @@ function MobileBottomNav({ activePage, setActivePage }: { activePage: PageId; se
   );
 }
 
+function DecorativeStamp({ small = false }: { small?: boolean }) {
+  return (
+    <div className={cn("grid place-items-center rounded-full border border-[#E86F91]/35 text-[#E86F91]", small ? "h-12 w-12" : "h-24 w-24")}>
+      <div className="grid h-[82%] w-[82%] place-items-center rounded-full border border-dashed border-[#E86F91]/45 text-center">
+        <span className={cn("font-serif font-bold leading-none", small ? "text-[9px]" : "text-sm")}>PONDY<br />STAMP</span>
+      </div>
+    </div>
+  );
+}
+
+function DecorativeWaves() {
+  return (
+    <div className="hidden h-8 w-20 sm:block">
+      <svg viewBox="0 0 96 32" fill="none" aria-hidden="true">
+        {[6, 14, 22].map((y) => (
+          <path key={y} d={`M0 ${y} C 14 ${y - 9}, 26 ${y + 9}, 40 ${y} S 66 ${y - 9}, 80 ${y} S 104 ${y + 9}, 118 ${y}`} stroke="#E86F91" strokeWidth="2" opacity=".55" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 function PondicherryHero({
   travelers,
-  options,
-  savedItinerary
+  setActivePage
 }: {
   travelers: Traveler[];
-  options: TripOption[];
-  savedItinerary: ItineraryCandidate | null;
+  setActivePage: (page: PageId) => void;
 }) {
-  const stayBudget = options.filter((option) => option.category === "stay").reduce((total, option) => total + (option.totalCost ?? 0), 0);
-  const nextStop = savedItinerary?.days.flatMap((day) => day.stops)[0]?.optionName ?? "Add places and generate the first plan";
-  const completedCategories = new Set(options.map((option) => option.category)).size;
-
   return (
-    <section id="dashboard" className="passport-paper overflow-hidden rounded-lg border border-border bg-white shadow-coastal">
-      <div className="relative grid gap-6 p-5 sm:p-7 xl:grid-cols-[1.35fr_0.65fr]">
-        <div className="absolute inset-x-0 bottom-0 h-8 wave-divider" />
-        <div className="relative z-10">
-          <Badge variant="accent" className="mb-4">Pondicherry Passport</Badge>
-          <h1 className="max-w-3xl text-4xl font-black leading-none tracking-tight text-primary sm:text-6xl">
-            Pondicherry Escape
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-text">
-            French Town - Promenade - cafes - beach mornings. A private command center for the August 1-4, 2026 group trip.
-          </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-4">
-            <TripCard label="Countdown" value={daysUntilTrip()} icon={CalendarDays} />
-            <TripCard label="Destination" value="Pondicherry" icon={MapPin} />
-            <TripCard label="Travellers" value={`${travelers.length} people`} icon={Users} />
-            <TripCard label="Categories" value={`${completedCategories}/6 started`} icon={CheckCircle2} />
-          </div>
+    <section id="dashboard" className="relative mx-auto grid max-w-[1500px] items-center gap-10 px-4 pb-12 pt-8 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-12 lg:pb-20">
+      <div className="relative z-10">
+        <h1 className="font-serif text-[4.8rem] font-bold leading-[0.9] text-[#0F3331] sm:text-[7.6rem] lg:text-[8.7rem]">
+          Pondicherry<br />Escape<span className="text-[#E86F91]">.</span>
+        </h1>
+        <p className="mt-8 max-w-xl text-xl leading-8 text-[#6F7775]">
+          French streets, ocean breeze and unforgettable moments with your people.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-4">
+          <InfoPill icon={CalendarDays} label="1 - 4 Aug, 2026" />
+          <InfoPill icon={Users} label={`${travelers.length} Travellers`} />
+          <InfoPill icon={Sparkles} label="28 C Sunny" />
         </div>
-        <div className="relative z-10 grid gap-3">
-          <Card className="border-primary/15 bg-primary text-white shadow-ticket">
-            <CardHeader>
-              <CardTitle className="text-white">Next Activity</CardTitle>
-              <CardDescription className="text-white/75">{nextStop}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="outline" className="border-white/25 bg-white/12 text-white">Organizer can save final itinerary</Badge>
-            </CardContent>
-          </Card>
-          <Card className="ticket-cut border-dashed">
-            <CardHeader>
-              <CardTitle>Weather</CardTitle>
-              <CardDescription>Sea breeze placeholder</CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-between">
-              <span className="text-3xl font-black text-secondary">28 C</span>
-              <Waves className="text-secondary" />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Budget Snapshot</CardTitle>
-              <CardDescription>Stay options currently total {money(stayBudget || null)}</CardDescription>
-            </CardHeader>
-          </Card>
+        <div className="mt-12 flex flex-col gap-4 sm:flex-row">
+          <Button type="button" onClick={() => setActivePage("itinerary")} className="h-14 rounded-full bg-[#E3A91A] px-9 text-base text-white hover:bg-[#cf9917]">
+            View Itinerary
+            <Navigation size={18} />
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setActivePage("plan")} className="h-14 rounded-full border-[#E9E2D6] bg-white/60 px-9 text-base text-[#0F3331]">
+            Explore Places
+          </Button>
+        </div>
+      </div>
+      <div className="relative min-h-[420px] lg:min-h-[680px]">
+        <div className="absolute inset-10 rounded-[48%_52%_45%_55%/45%_35%_65%_55%] bg-[#B9D7EA]/55" />
+        <div className="absolute left-0 top-24 z-20 opacity-70"><DecorativeStamp /></div>
+        <div className="absolute right-4 top-28 z-20 scale-125"><DecorativeWaves /></div>
+        <div className="absolute inset-x-5 top-8 overflow-hidden rounded-[44%_56%_47%_53%/42%_35%_65%_58%] border border-dashed border-[#0F3331]/22 bg-white p-3 shadow-[0_30px_80px_rgba(15,51,49,0.12)] lg:inset-x-16">
+          <Image src="/images/pondicherry/hero.svg" alt="Pondicherry French street illustration" width={900} height={680} priority className="h-full min-h-[390px] w-full rounded-[44%_56%_47%_53%/42%_35%_65%_58%] object-cover" />
         </div>
       </div>
     </section>
+  );
+}
+
+function InfoPill({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  return (
+    <div className="inline-flex items-center gap-3 rounded-xl border border-[#E9E2D6] bg-white/70 px-5 py-3 text-sm font-semibold text-[#0F3331] shadow-[0_10px_30px_rgba(15,51,49,0.05)]">
+      <Icon size={18} className="text-[#5F9388]" />
+      {label}
+    </div>
   );
 }
 
@@ -317,6 +353,169 @@ function TripCard({ label, value, icon: Icon }: { label: string; value: string; 
       <p className="text-xs font-bold uppercase tracking-wide text-mutedText">{label}</p>
       <p className="mt-1 text-lg font-black text-primary">{value}</p>
     </div>
+  );
+}
+
+const landingCategoryMeta: Array<{
+  title: string;
+  page: PageId;
+  category?: Category;
+  icon: React.ElementType;
+  tone: string;
+}> = [
+  { title: "Itinerary", page: "itinerary", icon: CalendarDays, tone: "#E3A91A" },
+  { title: "Food", page: "plan", category: "food", icon: Coffee, tone: "#6BA2CC" },
+  { title: "Shopping", page: "plan", category: "shopping", icon: ShoppingBag, tone: "#E86F91" },
+  { title: "Beaches", page: "plan", category: "beaches", icon: Umbrella, tone: "#5F9388" },
+  { title: "Temples", page: "plan", category: "temples", icon: Sparkles, tone: "#E3A91A" },
+  { title: "Night Life", page: "plan", category: "nightlife", icon: Palmtree, tone: "#E86F91" }
+];
+
+function LandingCategoryCards({
+  state,
+  setActivePage,
+  setActiveCategory
+}: {
+  state: StateResponse;
+  setActivePage: (page: PageId) => void;
+  setActiveCategory: (category: Category) => void;
+}) {
+  return (
+    <section className="mx-auto grid max-w-[1500px] gap-5 px-4 pb-10 sm:px-8 md:grid-cols-2 lg:grid-cols-3 lg:px-12 xl:grid-cols-6">
+      {landingCategoryMeta.map((item) => {
+        const count = item.category ? state.options.filter((option) => option.category === item.category).length : state.itineraryCandidates[0]?.days.length ?? tripDates.length;
+        const subtitle = item.category
+          ? item.category === "nightlife"
+            ? `${count} club picks`
+            : `${count} places saved`
+          : `${count} days planned`;
+        return (
+          <button
+            key={item.title}
+            type="button"
+            onClick={() => {
+              if (item.category) setActiveCategory(item.category);
+              setActivePage(item.page);
+            }}
+            className="group flex min-h-[160px] flex-col items-start justify-between rounded-[1.25rem] border border-[#E9E2D6] bg-white/78 p-6 text-left shadow-[0_22px_60px_rgba(15,51,49,0.06)] transition hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(15,51,49,0.1)]"
+          >
+            <span className="grid h-12 w-12 place-items-center rounded-full" style={{ backgroundColor: `${item.tone}1f`, color: item.tone }}>
+              <item.icon size={23} />
+            </span>
+            <span>
+              <span className="block font-serif text-2xl text-[#0F3331]">{item.title}</span>
+              <span className="mt-1 block text-sm font-medium text-[#6F7775]">{subtitle}</span>
+            </span>
+            <span className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-white transition group-hover:translate-x-1" style={{ backgroundColor: item.tone }}>
+              <Navigation size={15} />
+            </span>
+          </button>
+        );
+      })}
+    </section>
+  );
+}
+
+function DashboardEditorial({
+  state,
+  stayOptions,
+  totalStayBudget
+}: {
+  state: StateResponse;
+  stayOptions: RankedOption[];
+  totalStayBudget: number;
+}) {
+  const nextStop = state.savedItinerary?.days.flatMap((day) => day.stops)[0] ?? state.itineraryCandidates[0]?.days.flatMap((day) => day.stops)[0];
+  const nextTitle = nextStop?.optionName ?? "Auroville Visit & Cafes";
+  const nextArea = nextStop?.location ?? "Auroville, Pondicherry";
+  const displayBudget = totalStayBudget || 60000;
+  const spent = Math.round(displayBudget * 0.63);
+  const remaining = displayBudget - spent;
+
+  return (
+    <>
+      <section className="mx-auto grid max-w-[1500px] gap-6 px-4 pb-10 sm:px-8 lg:grid-cols-[0.9fr_1.1fr_0.85fr] lg:px-12">
+        <div className="relative overflow-hidden py-4">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#E86F91]">About this trip</p>
+          <h2 className="mt-5 font-serif text-5xl leading-[0.95] text-[#0F3331]">
+            Slow days.<br />Good company.<br />Great memories<span className="text-[#E86F91]">.</span>
+          </h2>
+          <p className="mt-6 max-w-sm text-sm leading-7 text-[#6F7775]">
+            From sunrise walks to late night gelato runs, here's everything we have planned for our Pondicherry escape.
+          </p>
+          <p className="mt-7 font-serif text-2xl italic text-[#E86F91]">Let the good times roll!</p>
+          <div className="absolute bottom-0 left-0 h-16 w-full opacity-35">
+            <svg viewBox="0 0 420 80" fill="none" aria-hidden="true">
+              <path d="M0 72H420M16 72V44H48V72M64 72V36H108V72M128 72V50H184V72M220 72V28M220 28C238 38 252 42 272 36M220 28C204 40 194 48 186 64" stroke="#6BA2CC" strokeWidth="2" />
+            </svg>
+          </div>
+        </div>
+
+        <div className="relative rounded-[1.25rem] border border-[#E9E2D6] bg-white/76 p-5 shadow-[0_22px_60px_rgba(15,51,49,0.06)]">
+          <Badge variant="secondary" className="mb-4">Next up</Badge>
+          <div className="grid gap-4 sm:grid-cols-[1fr_220px]">
+            <div className="rounded-[1rem] border border-[#E9E2D6] bg-white p-5">
+              <p className="text-xs font-semibold text-[#6F7775]">Day 2 - 10:30 AM</p>
+              <h3 className="mt-4 font-serif text-3xl leading-tight text-[#0F3331]">{nextTitle}</h3>
+              <p className="mt-4 flex items-center gap-2 text-sm text-[#6F7775]"><MapPin size={15} /> {nextArea}</p>
+              <div className="mt-6 flex -space-x-2">
+                {state.travelers.slice(0, 5).map((traveler) => (
+                  <span key={traveler.id} className="grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-[#B9D7EA] text-[10px] font-black text-[#0F3331]">
+                    {traveler.name.split(" ").map((part) => part[0]).join("").slice(0, 2)}
+                  </span>
+                ))}
+                <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-[#F3E8D4] text-xs font-bold text-[#6F7775]">+{Math.max(state.travelers.length - 5, 0)}</span>
+              </div>
+            </div>
+            <div className="relative min-h-[250px] overflow-hidden rounded-[1rem]">
+              <Image src="/images/pondicherry/auroville.svg" alt="Auroville stop" fill className="object-cover" />
+              <span className="absolute -right-5 top-5 h-8 w-24 rotate-45 bg-[#F1D68F]/80" />
+            </div>
+          </div>
+          <button type="button" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#5F9388]">
+            View full itinerary <Navigation size={16} />
+          </button>
+        </div>
+
+        <div className="rounded-[1.25rem] border border-[#E9E2D6] bg-white/76 p-7 shadow-[0_22px_60px_rgba(15,51,49,0.06)]">
+          <Badge variant="secondary" className="mb-10">Budget overview</Badge>
+          <p className="text-sm text-[#6F7775]">Total Budget</p>
+          <p className="mt-2 font-serif text-4xl text-[#0F3331]">{money(displayBudget)}</p>
+          <Progress value={63} className="mt-8" />
+          <div className="mt-8 grid grid-cols-2 gap-5 text-sm">
+            <div>
+              <p className="text-[#6F7775]">Spent</p>
+              <p className="mt-2 font-bold text-[#5F9388]">{money(spent)}</p>
+            </div>
+            <div>
+              <p className="text-[#6F7775]">Remaining</p>
+              <p className="mt-2 font-bold text-[#E86F91]">{money(remaining)}</p>
+            </div>
+          </div>
+          <p className="mt-8 text-xs text-[#6F7775]">{stayOptions.length ? "Based on saved stay costs." : "Estimate until stays are added."}</p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1500px] px-4 pb-12 sm:px-8 lg:px-12">
+        <div className="grid gap-5 rounded-[1.25rem] bg-[#DCEDEA] p-6 sm:grid-cols-[260px_1fr] lg:p-8">
+          <div className="flex items-center">
+            <p className="font-serif text-3xl leading-tight text-[#0F3331]"><span className="text-5xl text-[#5F9388]">"</span><br />Collect moments,<br />not things.</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["/images/pondicherry/beach.svg", "Beach morning"],
+              ["/images/pondicherry/french-street.svg", "French street"],
+              ["/images/pondicherry/sunset.svg", "Sunset lighthouse"],
+              ["/images/pondicherry/pink-building.svg", "Heritage house"]
+            ].map(([src, alt]) => (
+              <div key={src} className="relative min-h-[180px] overflow-hidden rounded-[1rem] bg-white">
+                <Image src={src} alt={alt} fill className="object-cover" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -671,17 +870,29 @@ export default function PlannerApp() {
 
   const stayOptions = state.rankedOptions.filter((option) => option.category === "stay");
   const totalStayBudget = stayOptions.reduce((total, option) => total + (option.totalCost ?? 0), 0);
-  const requiredStarted = ["temples", "beaches", "shopping", "nightlife"].filter((category) =>
-    state.options.some((option) => option.category === category)
-  ).length;
   const topOption = state.rankedOptions[0];
 
   return (
-    <main className="min-h-screen pb-24 lg:pb-8">
-      <div className="mx-auto flex max-w-[1600px] gap-5 p-3 sm:p-5">
-        <DesktopSidebar activePage={activePage} setActivePage={setActivePage} />
-        <div className="min-w-0 flex-1 space-y-5">
-          <header id="settings" className="flex flex-col gap-3 rounded-lg border border-border bg-white/80 p-4 shadow-ticket backdrop-blur md:flex-row md:items-end md:justify-between">
+    <main className="min-h-screen bg-[#FBF8F1] pb-24 text-[#0F3331] lg:pb-8">
+      <HeaderNav
+        activePage={activePage}
+        setActivePage={setActivePage}
+        travelers={state.travelers}
+        activeTraveler={activeTravelerRecord}
+        onAdd={openAddOption}
+      />
+
+      {activePage === "dashboard" ? (
+        <>
+          <PondicherryHero travelers={state.travelers} setActivePage={setActivePage} />
+          <LandingCategoryCards state={state} setActivePage={setActivePage} setActiveCategory={setActiveCategory} />
+          <DashboardEditorial state={state} stayOptions={stayOptions} totalStayBudget={totalStayBudget} />
+        </>
+      ) : null}
+
+      <div className={cn("mx-auto max-w-[1500px] px-4 sm:px-8 lg:px-12", activePage === "dashboard" && "hidden")}>
+        <div className="min-w-0 space-y-5">
+          <header id="settings" className="flex flex-col gap-3 rounded-[1.25rem] border border-[#E9E2D6] bg-white/80 p-4 shadow-ticket backdrop-blur md:flex-row md:items-end md:justify-between">
             <div>
               <Badge variant="secondary">Coastal command center</Badge>
               <p className="mt-2 text-sm text-mutedText">Pick your name, rate options, and let the group plan settle itself.</p>
@@ -696,16 +907,6 @@ export default function PlannerApp() {
               </Button>
             </div>
           </header>
-
-          {activePage === "dashboard" ? <PondicherryHero travelers={state.travelers} options={state.options} savedItinerary={state.savedItinerary} /> : null}
-
-          <section className={cn("grid gap-3 md:grid-cols-2 xl:grid-cols-5", activePage !== "dashboard" && "hidden")}>
-            {tripDates.map((date) => {
-              const count = state.travelers.filter((traveler) => traveler.attendance.includes(date)).length;
-              return <TripCard key={date} label={prettyDate(date)} value={`${count} people`} icon={CalendarDays} />;
-            })}
-            <TripCard label="Must-haves" value={`${requiredStarted}/4 started`} icon={CheckCircle2} />
-          </section>
 
           <section id="plan" className={cn("grid gap-5", activePage !== "plan" && "hidden")}>
             <Card>
