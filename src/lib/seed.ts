@@ -125,13 +125,63 @@ function slug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+function seedLocation(name: string) {
+  const locations: Record<string, string> = {
+    "Anthe Restaurant": "White Town, Pondicherry",
+    "Bread & Chocolate": "Auroville Main Road, Kuilapalayam",
+    "GMT Gelato": "White Town / Mission Street, Pondicherry",
+    "Coromandel Cafe": "Romain Rolland Street, White Town",
+    "Tanto Pondy": "Auroville Main Road, Kuilapalayam",
+    "KBS Cafe": "Mission Street, Heritage Town",
+    "Maison Perumal": "Perumal Koil Street, Heritage Town",
+    "Villa Shanti": "Suffren Street, White Town",
+    "Pondicherry Kamatchi": "Heritage Town, Pondicherry",
+    "Dune Eco Village": "Pudhukuppam, near Auroville",
+    "Le Petit Four": "White Town, Pondicherry",
+    "The Spot": "Serenity Beach Road, Kottakuppam",
+    "Baker Street": "Bussy Street, Pondicherry",
+    "Hotel Madurai Veedu": "Mission Street, Heritage Town",
+    "Pretty Starbucks": "White Town / Promenade area",
+    "Chez Francis": "Rue Romain Rolland, White Town",
+    "Hotel Rolex": "Nehru Street area, Pondicherry",
+    "Flowerchild Closet": "White Town, Pondicherry",
+    "Hidesign Factory Outlet": "Auroville Main Road, Kuilapalayam",
+    "Street Shopping - Nehru Street / Sunday Market / A2B area": "Nehru Street / Sunday Market, Pondicherry",
+    "Chintz": "White Town, Pondicherry",
+    "Janaki": "Mission Street, Heritage Town",
+    "Anokhi": "Casablanca area, Mission Street",
+    "Via Pondicherry": "White Town, Pondicherry",
+    "Crepes in Touch": "Kuilapalayam, Auroville Road",
+    "Church Gate": "Mission Street, Heritage Town",
+    "La Maison Rose": "Romain Rolland Street, White Town",
+    "Kalinka Art Gallery": "Auroville / Kuilapalayam",
+    "Sri Aurobindo Ashram": "Rue de la Marine, White Town",
+    "Vinayagar Temple": "Manakula Vinayagar Street, White Town",
+    "Varadaraja Perumal Temple": "Mahatma Gandhi Road, Heritage Town",
+    "Sacred Heart Basilica": "Subbayah Salai, Pondicherry",
+    "Rock Beach": "Goubert Avenue, Promenade",
+    "Sunrise": "Rock Beach / Goubert Avenue Promenade",
+    "Eden Beach": "Chinna Veerampattinam, Pondicherry",
+    "Pondy Marina": "Dubrayapet, near New Light House",
+    "Mangrove Forest": "Ariyankuppam / Chunnambar backwaters",
+    "Arikamedu": "Ariyankuppam, Pondicherry",
+    "Pondy Yacht Club": "Thengaithittu / Ariyankuppam backwaters",
+    "Chunnambar Boat House": "Nonankuppam, Cuddalore Road",
+    "French Colony / White Town": "White Town, Pondicherry",
+    "Catamaran Brewing Company": "Kamaraj Salai, Pondicherry",
+    "Mel Whisks": "Heritage Town, Pondicherry"
+  };
+
+  return locations[name] ?? "Pondicherry area";
+}
+
 export function createSeedOptions(): TripOption[] {
   return seedOptionGroups.flatMap((group) =>
     group.items.map((item) => ({
       id: `seed-${group.category}-${slug(item.name)}`,
       category: group.category,
       name: item.name,
-      location: "Pondicherry",
+      location: seedLocation(item.name),
       link: "",
       description: item.type,
       famousFor: item.bestTime,

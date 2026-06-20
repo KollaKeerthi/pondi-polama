@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Bike,
+  AlertCircle,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -17,6 +17,7 @@ import {
   NotebookPen,
   PackageCheck,
   Palmtree,
+  Plane,
   Plus,
   RefreshCw,
   Save,
@@ -38,7 +39,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -85,19 +85,19 @@ const desktopNav = [
   ["Overview", "dashboard", Map],
   ["Places", "plan", Navigation],
   ["Itinerary", "itinerary", CalendarDays],
-  ["Expenses", "expenses", CreditCard],
   ["Group", "group", Users],
-  ["Memories", "memories", Umbrella],
   ["Bookings", "bookings", Ticket],
   ["Packing", "packing", PackageCheck],
   ["Notes", "notes", NotebookPen],
-  ["Settings", "settings", Settings]
+  ["Settings", "settings", Settings],
+  ["Expenses", "expenses", CreditCard],
+  ["Memories", "memories", Umbrella]
 ] as const;
 
 const mobileNav = [
   ["Home", "dashboard", Map],
   ["Plan", "plan", CalendarDays],
-  ["Expenses", "expenses", CreditCard],
+  ["Bookings", "bookings", Ticket],
   ["Group", "group", Users],
   ["More", "more", Sparkles]
 ] as const;
@@ -215,8 +215,8 @@ function HeaderNav({
         <DecorativeStamp small />
         <DecorativeWaves />
       </div>
-      <nav className="hidden items-center gap-9 lg:flex">
-        {desktopNav.slice(0, 6).map(([label, href]) => (
+      <nav className="hidden items-center gap-5 lg:flex xl:gap-7">
+        {desktopNav.map(([label, href]) => (
           <button
             key={href}
             type="button"
@@ -776,7 +776,6 @@ export default function PlannerApp() {
 
   const stayOptions = state.rankedOptions.filter((option) => option.category === "stay");
   const totalStayBudget = stayOptions.reduce((total, option) => total + (option.totalCost ?? 0), 0);
-  const topOption = state.rankedOptions[0];
 
   return (
     <main className="min-h-screen bg-[#FBF8F1] pb-24 text-[#0F3331] lg:pb-8">
@@ -926,7 +925,11 @@ export default function PlannerApp() {
           </section>
 
           <section id="expenses" className={cn("grid gap-5", activePage !== "expenses" && "hidden")}>
-            <ExpensesSection stayOptions={stayOptions} totalStayBudget={totalStayBudget} />
+            <ComingSoonSection
+              title="Expenses"
+              description="Settlements, paid-by tracking, per-person splits, and shared budget summaries will live here once the travel plan is locked."
+              icon={CreditCard}
+            />
           </section>
 
           <section id="group" className={cn(activePage !== "group" && "hidden")}>
@@ -950,7 +953,11 @@ export default function PlannerApp() {
           </section>
 
           <section id="memories" className={cn(activePage !== "memories" && "hidden")}>
-            <NotesMemories topOption={topOption} />
+            <ComingSoonSection
+              title="Memories"
+              description="Trip photos, favorite moments, quotes, and post-trip notes will live here after the Pondicherry plan is ready."
+              icon={Umbrella}
+            />
           </section>
 
           <section id="more" className={cn("grid gap-5 md:grid-cols-2", activePage !== "more" && "hidden")}>
@@ -960,7 +967,7 @@ export default function PlannerApp() {
                 <CardDescription>Quick access to the quieter trip pages.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-2 sm:grid-cols-2">
-                {(["bookings", "packing", "notes", "memories", "settings"] as PageId[]).map((page) => (
+                {(["bookings", "packing", "notes", "settings", "expenses", "memories"] as PageId[]).map((page) => (
                   <Button key={page} type="button" variant="outline" onClick={() => setActivePage(page)}>
                     {page[0].toUpperCase() + page.slice(1)}
                   </Button>
@@ -1288,29 +1295,83 @@ function StaySection({ stayOptions, totalStayBudget }: { stayOptions: RankedOpti
 }
 
 function TransportSection() {
+  const confirmedTrips = [
+    {
+      title: "Hyderabad to Pondicherry",
+      travelers: "Main HYD group",
+      date: "Aug 1, 2026",
+      time: "11:45 AM - 1:40 PM",
+      duration: "1 hr 55 min",
+      route: "HYD - PNY",
+      operator: "IndiGo",
+      note: "Nonstop"
+    },
+    {
+      title: "Pondicherry to Hyderabad",
+      travelers: "Main HYD return group",
+      date: "Aug 4, 2026",
+      time: "5:30 PM - 7:20 PM",
+      duration: "1 hr 50 min",
+      route: "PNY - HYD",
+      operator: "IndiGo",
+      note: "Return flight"
+    },
+    {
+      title: "Sadana return",
+      travelers: "Sadana",
+      date: "Aug 3, 2026",
+      time: "Time to confirm",
+      duration: "Route to confirm",
+      route: "PNY - HYD",
+      operator: "Flight details pending",
+      note: "Leaves one day early"
+    }
+  ];
+  const timingQuestions = [
+    "Bhavya: Bangalore to Pondicherry arrival time on Aug 2, and Pondicherry to Bangalore departure time on Aug 4.",
+    "Siva Prasad: Bangalore to Pondicherry arrival time on Aug 2, and Pondicherry to Bangalore departure time on Aug 4.",
+    "Kusuma: Bangalore to Pondicherry arrival time on Aug 2, and Pondicherry to Bangalore departure time on Aug 4.",
+    "Anirudh: Pondicherry to Hyderabad departure time on Aug 4."
+  ];
+
   return (
     <div className="grid gap-5">
       <Card>
         <CardHeader>
-          <PageHeader eyebrow="Boarding passes" title="Transport / tickets" description="A ticket-style area for train, bus, cab, flight, and rental-bike plans." />
+          <PageHeader eyebrow="Boarding passes" title="Transport / tickets" description="Confirmed flight windows and timing questions needed before the itinerary can be finalized." />
         </CardHeader>
-        <CardContent>
-        <div className="ticket-cut rounded-lg border border-dashed border-border bg-white p-4 shadow-ticket">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <Badge variant="outline">Transport placeholder</Badge>
-              <h3 className="mt-3 text-xl font-black text-primary">Add train, bus, cab, or rental details</h3>
-              <p className="mt-1 text-sm leading-6 text-mutedText">Backend storage for dedicated transport tickets is not in v1, so this section preserves the feature as a visual planning slot.</p>
+        <CardContent className="grid gap-4">
+          <div className="grid gap-3 lg:grid-cols-3">
+            {confirmedTrips.map((trip) => (
+              <div key={`${trip.title}-${trip.date}`} className="ticket-cut rounded-lg border border-dashed border-border bg-white p-4 shadow-ticket">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <Badge variant="outline">{trip.operator}</Badge>
+                    <h3 className="mt-3 text-lg font-black text-primary">{trip.title}</h3>
+                    <p className="mt-1 text-sm text-mutedText">{trip.travelers} - {trip.date}</p>
+                  </div>
+                  <Plane className="text-secondary" size={28} />
+                </div>
+                <Separator className="my-4 border-dashed" />
+                <div className="grid gap-2 text-sm">
+                  <span className="font-black text-primary">{trip.time}</span>
+                  <span>{trip.duration} - {trip.route}</span>
+                  <span className="text-mutedText">{trip.note}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-lg border border-accent/25 bg-accent/10 p-4">
+            <div className="mb-3 flex items-center gap-2 font-black text-primary">
+              <AlertCircle size={18} className="text-accent" />
+              Timings to collect individually
             </div>
-            <Train className="text-secondary" size={34} />
+            <div className="grid gap-2">
+              {timingQuestions.map((question) => (
+                <p key={question} className="rounded-md bg-white/70 p-3 text-sm leading-6 text-mutedText">{question}</p>
+              ))}
+            </div>
           </div>
-          <Separator className="my-4 border-dashed" />
-          <div className="grid gap-3 text-sm sm:grid-cols-3">
-            <span>From: TBD</span>
-            <span>To: Pondicherry</span>
-            <span>PNR: TBD</span>
-          </div>
-        </div>
         </CardContent>
       </Card>
       <LocalCrudSection
@@ -1327,46 +1388,18 @@ function TransportSection() {
   );
 }
 
-function ExpensesSection({ stayOptions, totalStayBudget }: { stayOptions: RankedOption[]; totalStayBudget: number }) {
-  const categoriesWithOptions = categories.map((category) => ({
-    category,
-    count: stayOptions.filter((option) => option.category === category).length
-  }));
-
+function ComingSoonSection({ title, description, icon: Icon }: { title: string; description: string; icon: React.ElementType }) {
   return (
     <Card>
       <CardHeader>
-        <PageHeader eyebrow="Expenses" title="Budget and settlements" description="Uses available stay cost data today, with clear placeholders for richer expense tracking later." />
+        <PageHeader eyebrow="Coming soon" title={title} description={description} />
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <TripCard label="Total budget" value={money(totalStayBudget || null)} icon={CreditCard} />
-          <TripCard label="Spent" value="TBD" icon={CheckCircle2} />
-          <TripCard label="Remaining" value="TBD" icon={Sparkles} />
+      <CardContent>
+        <div className="grid place-items-center rounded-lg border border-dashed border-border bg-background/65 p-10 text-center">
+          <Icon className="mb-4 text-accent" size={34} />
+          <p className="text-2xl font-black text-primary">{title} is coming soon</p>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-mutedText">{description}</p>
         </div>
-        <Card className="shadow-none">
-          <CardContent className="space-y-3 p-4">
-            {categories.map((category) => (
-              <div key={category}>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="font-bold text-primary">{categoryLabels[category]}</span>
-                  <span className="text-mutedText">{category === "stay" ? stayOptions.length : 0} items</span>
-                </div>
-                <Progress value={category === "stay" && stayOptions.length ? 68 : 8} />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-        <LocalCrudSection
-          storageKey="pondi-expenses"
-          title="Expenses"
-          description="Create, edit, settle, and delete group expenses while the shared stay budget stays visible above."
-          icon={CreditCard}
-          titlePlaceholder="e.g. Dinner at Coromandel Cafe"
-          detailPlaceholder="Who paid, who shared, settlement notes"
-          metaPlaceholder="Category or payer"
-          amountPlaceholder="Amount"
-        />
       </CardContent>
     </Card>
   );
@@ -1530,46 +1563,6 @@ function PackingChecklist({
         titlePlaceholder="e.g. Beach mat"
         detailPlaceholder="Who brings it or where it is packed"
         metaPlaceholder="Category or assigned person"
-      />
-    </div>
-  );
-}
-
-function NotesMemories({ topOption }: { topOption?: RankedOption }) {
-  return (
-    <div className="grid gap-5">
-      <Card>
-        <CardHeader>
-          <PageHeader eyebrow="Journal" title="Memories" description="A soft travel-journal area for recommendations, photo placeholders, and favorite moments." />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border border-border bg-background/65 p-4">
-            <p className="text-sm font-bold text-mutedText">Current group favorite</p>
-            <p className="mt-1 text-xl font-black text-primary">{topOption?.name ?? "No ratings yet"}</p>
-            <p className="mt-1 text-sm text-mutedText">{topOption ? `${topOption.location} - ${topOption.averageRating.toFixed(1)} stars` : "Start rating places to create a favorite moment."}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg border border-dashed border-highlight/45 bg-highlight/10 p-4">
-              <NotebookPen className="mb-3 text-highlight" />
-              <p className="font-black text-primary">Food recommendations</p>
-              <p className="mt-1 text-sm text-mutedText">Add cafes and meals through Food options.</p>
-            </div>
-            <div className="rounded-lg border border-dashed border-secondary/45 bg-secondary/10 p-4">
-              <Bike className="mb-3 text-secondary" />
-              <p className="font-black text-primary">Favorite moments</p>
-              <p className="mt-1 text-sm text-mutedText">Ready for post-trip notes.</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <LocalCrudSection
-        storageKey="pondi-memories"
-        title="Memories"
-        description="Create, edit, complete, and delete favorite moments or photo placeholders."
-        icon={Umbrella}
-        titlePlaceholder="e.g. Sunset at Rock Beach"
-        detailPlaceholder="What happened, who was there, photo note"
-        metaPlaceholder="Moment, photo, food, quote"
       />
     </div>
   );
